@@ -19,14 +19,12 @@ function sendAndReceive() {
 		$(document.getElementById("helpTips")).hide();
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var port = chrome.tabs.connect(tabs[0].id, {name: "fromSendAndReceive"});
-			$(document.getElementById("loading")).show();
 			port.postMessage({searchText: searchText});
 			port.onMessage.addListener(function(msg) {
 				lastMsgWithMatches = msg;
 				matchesSelectedCount = 0;
 				render(msg, matchesSelectedCount);
 			});
-			$(document.getElementById("loading")).hide();
 		});
 	}
 }
@@ -112,11 +110,11 @@ document.getElementById("help").addEventListener("click", function(e) {
 })
 
 var tips = ['<b>Tip</b>: Use <b>Ctrl+Shift+K</b> to open/close the extension. ',
-			'<b>Info</b>: Synonyms and relate words are found locally in a dictionary file. ',
-			'<b>Tip</b>: Press <ENTER> to go down the match list. ', 
-			'<b>Tip</b>: Use up/down keys to cycle up and down the match list. ',
-			'<b>Info</b>: Edit distance between phrases gives roughly the number of letters out of place between the phrases. ',
-			'<b>Tip</b>: To search by synonyms and related words, be sure to enter your words fully. '];
+'<b>Info:</b> Synonyms and relate words are found locally in a dictionary file. ',
+'<b>Tip:</b>: Press <ENTER> to go down the match list. ', 
+'<b>Tip</b> Use up/down keys to cycle up and down the match list. ',
+'<b>Info:</b> Edit distance between phrases gives roughly the number of letters out of place between the phrases. ',
+'<b>Tip:</b> To search by synonyms and related words, be sure to enter your words fully. '];
 
 window.onload = function() {
 	document.getElementById("searchText").value = 'loading...';
@@ -139,5 +137,4 @@ window.onload = function() {
 			}
 		});
 	});
-	$(document.getElementById("loading")).hide();
 };

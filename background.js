@@ -1,5 +1,5 @@
 /* author: ijkilchenko@gmail.com
-   MIT license */
+MIT license */
 
 var vectors;
 $.getJSON("./vectors_dict.json", function(json) {
