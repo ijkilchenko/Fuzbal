@@ -159,7 +159,7 @@ function expandSearchText(searchText) {
 		if (substitutions[searchTextWords[i]].length > 10) {
 			substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
 		}
-		
+
 	}
 	var substitutionsInOrder = []; // will hold our regular expression which has substitutions for each word in searchText
 	for (var i = 0; i < searchTextWords.length; i++) {
@@ -222,6 +222,10 @@ function getMatches(searchText) {
 		} else {
 			matches_by_hash[hash] = {count: 1, parent: parent, element: highlited[i]};
 		}
+		/* Performance condition. We shall care about the first 200 parent-match combinations only. */
+		if (i > 200) {
+			break;
+		}
 	}
 	var id = 1; // we use 1-based ids because these will also become the labels in the popup and must be human readable
 	for (var hash in matches_by_hash) { // go through each hash (combination or parent element and match)
@@ -234,13 +238,20 @@ function getMatches(searchText) {
 			var m = regex.exec(parent);
 			if (m) {
 				text = m[0];
-
 				matches[matches.length] = {id: id, thisMatch: matches_by_hash[hash].element.innerHTML, 
 					context: text, element: matches_by_hash[hash].element};
 				id += 1;
 			}
 			j += 1;
+			if (matches.length > 100) {
+				break;
+			}
 		}
+		/* Performance condition. We shall care about the first 100 matches only. */
+		if (matches.length > 100) {
+			matches = matches.slice(0, 100);
+		}
+		
 	}
 	/* The following block sorts the matches array based on thisMatch attribute and 
 	   how close it is to the original searchText based on the edit-distance score. */ 

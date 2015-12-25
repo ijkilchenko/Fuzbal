@@ -52,6 +52,9 @@ function render(msg, matchesSelectedCount) {
 	var rendered = '';
 	if (numMatches > 0) {
 		$(document.getElementById("matchesList")).show();
+		if (numMatches > 99) {
+			numMatches = 'many';
+		}
 		rendered = Mustache.render(template, {msg: {numMatches : numMatches, 
 			matchesBeforeSelected: matchesBeforeSelected, matchesSelected: matchesSelected, matchesAfterSelected: matchesAfterSelected}});
 	} else {
