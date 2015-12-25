@@ -29,8 +29,15 @@
     </div>
 
     <div id="helpTips" style="display:none">
-      <p>Hello!</p>
-      <p>Welcome to help!</p>
+      <h1>Welcome to Fuzbal</h1>
+      <p>Fuzbal gives Ctrl+F like find results which include non-exact (fuzzy) matches. The fuzziness comes from trying to match potentially
+        misspellet words and words that are often seen together in context. The former uses Damerau-Levenshtein string edit distance while
+        the latter uses word2vec trained language model. The language dictionary file takes up 99% of the extension's size and so all searches are 
+        done locally. 
+      <p>Each opened page is preprocessed even if the extension is never used on that page. In the future versions, we may give an option to disable
+        this feature in some settings page. </p>
+      <p>Use <b>Ctrl+Shift+K</b> to open the extension. </p>
+      <p>Use up/down arrow keys to cycle through results. </p>
     </div>
 
     <div id="template" style="display:none">
@@ -54,7 +61,6 @@
   <br/>
 
   <div id="footer">
-    <p>Tip: use up/down arrow keys to navigate results</p>
   </div>
 
   <script src="./libraries/mustache.min.js"></script>
