@@ -19,18 +19,19 @@ function sendAndReceive() {
 		$(document.getElementById("helpTips")).hide();
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var port = chrome.tabs.connect(tabs[0].id, {name: "fromSendAndReceive"});
+			$(document.getElementById("loading")).show();
 			port.postMessage({searchText: searchText});
 			port.onMessage.addListener(function(msg) {
 				lastMsgWithMatches = msg;
 				matchesSelectedCount = 0;
 				render(msg, matchesSelectedCount);
 			});
+			$(document.getElementById("loading")).hide();
 		});
 	}
 }
 
 function render(msg, matchesSelectedCount) {
-	console.log(matchesSelectedCount);
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		var port = chrome.tabs.connect(tabs[0].id, {name: "scrollToMatch"});
 		port.postMessage({matchesSelectedCount: matchesSelectedCount});
@@ -66,7 +67,6 @@ function render(msg, matchesSelectedCount) {
 if (document.addEventListener ){
 	document.addEventListener("click", function(event){
 		var targetElement = event.target || event.srcElement;
-		console.log(targetElement);
 		do {
 			if (targetElement.getAttribute('class') == 'matchItem') {
 				matchesSelectedCount = targetElement.getAttribute('id') - 1;
@@ -80,7 +80,6 @@ if (document.addEventListener ){
 } else if (document.attachEvent) {    
 	document.attachEvent("onclick", function(){
 		var targetElement = event.target || event.srcElement;
-		console.log(targetElement);
 	});
 }
 
@@ -140,4 +139,5 @@ window.onload = function() {
 			}
 		});
 	});
+	$(document.getElementById("loading")).hide();
 };
