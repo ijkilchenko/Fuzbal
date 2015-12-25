@@ -241,7 +241,7 @@ function getMatches(searchText, knn, radius) {
 		while (j < count) {
 			var m = regex.exec(parent);
 			if (m) {
-				text = m[0];
+				var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
 				matches[matches.length] = {id: id, thisMatch: matches_by_hash[hash].element.innerHTML, 
 					context: text, element: matches_by_hash[hash].element};
 				id += 1;

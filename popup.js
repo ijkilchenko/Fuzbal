@@ -110,7 +110,7 @@ document.getElementById("help").addEventListener("click", function(e) {
 })
 
 var tips = ['<b>Tip</b>: Use <b>Ctrl+Shift+K</b> to open/close the extension. ',
-'<b>Info:</b> Synonyms and relate words are found locally in a dictionary file. ',
+'<b>Info:</b> Synonyms and related words are found locally in a dictionary file. ',
 '<b>Tip:</b>: Press <ENTER> to go down the match list. ', 
 '<b>Tip</b> Use up/down keys to cycle up and down the match list. ',
 '<b>Info:</b> Edit distance between phrases gives roughly the number of letters out of place between the phrases. ',
@@ -138,3 +138,10 @@ window.onload = function() {
 		});
 	});
 };
+
+$(document).ready(function(){
+   $('body').on('click', 'a', function(){
+     chrome.tabs.create({url: $(this).attr('href')});
+     return false;
+   });
+});

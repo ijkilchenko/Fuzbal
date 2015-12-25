@@ -42,20 +42,22 @@
       </p>
       <p>Use up/down arrow keys to cycle through results. 
       </p>
+      <p><a href="https://github.com/ijkilchenko/Fuzbal">Fuzbal is open source</a>
+      </p>
     </div>
 
     <div id="template" style="display:none">
       {{#msg}}
       {{#matchesSelected}}
       <p>{{id}} of {{numMatches}}</p>
-      <span id="{{id}}" class="matchItem"><li><b><span style="background-color:#00FF00">{{thisMatch}}</span>: </b>{{context}}</li></span>
+      <span id="{{id}}" class="matchItem"><li><b><span style="background-color:#00FF00">{{thisMatch}}</span>: </b>{{{context}}}</li></span>
       {{/matchesSelected}}
       {{#matchesAfterSelected}}
-      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{context}}</li></span>
+      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
       {{/matchesAfterSelected}}
       <hr/>
       {{#matchesBeforeSelected}}
-      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{context}}</li></span>
+      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
       {{/matchesBeforeSelected}}
       {{/msg}}
     </div>
@@ -68,8 +70,8 @@
   </div>
 
   <script src="./libraries/mustache.min.js"></script>
-  <script src="./popup.js"></script>
   <script src="./libraries/jquery-2.1.4.min.js"></script>
+  <script src="./popup.js"></script>
   <script src="./libraries/bootstrap.min.js"></script>
 </body>
 </html>
