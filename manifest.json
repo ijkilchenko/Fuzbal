@@ -1,0 +1,48 @@
+{
+  "name": "Fuzbal",
+  "version": "0.8",
+  "manifest_version": 2,
+  "description": "Gives Ctrl+F like find results which include non-exact (fuzzy) matches. ",
+  "icons": {
+    "128": "./icons/flower_icon.png"
+  },
+  "browser_action": {
+    "default_name": "Fuzbal",
+    "default_icon": "./icons/flower_marker.png",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": [
+      "./libraries/jquery-2.1.4.min.js",
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*",
+        "file://*/*"
+      ],
+      "js": [
+        "./libraries/jquery-2.1.4.min.js",
+        "./libraries/bootstrap.min.js",
+        "./libraries/damerau_levenshtein.js",
+        "content_script.js"
+      ]
+    }
+  ],
+  "commands": {
+    "_execute_browser_action": {
+      "suggested_key": {
+        "windows": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K",
+        "chromeos": "Ctrl+Shift+K",
+        "linux": "Ctrl+Shift+K"
+      }
+    }
+  },
+  "permissions": [
+    "file://*/*",
+    "tabs"
+  ]
+}
