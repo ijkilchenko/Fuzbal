@@ -59,7 +59,11 @@ chrome.runtime.onConnect.addListener(function(portP) {
 			clearHighlighting();
 			searchText = sanitize(searchText);
 			if (searchText.length > 0) {
-				portP.postMessage({matches: getMatches(searchText)});
+				matches = getMatches(searchText, 10, 100);
+				if (matches.length == 0) {
+					matches = getMatches(searchText, 20, 200);	
+				}
+				portP.postMessage({matches: matches});
 			} else {
 				portP.postMessage({matches: []}); // send empty list back if nothing is in the searchText input box
 			}
@@ -94,7 +98,7 @@ function scrollToHighlite(matchesSelectedCount) {
 	}
 }
 
-function expandSearchText(searchText) {
+function expandSearchText(searchText, knn, radius) {
 	var searchTextWords = searchText.split(' ');
 	var searchTexts = [searchText]; // original search text must be returned no matter what
 
@@ -148,8 +152,8 @@ function expandSearchText(searchText) {
 			}
 			words = words.sort(function(elem1, elem2) {
 				return elem1.score - elem2.score; // sort the words array by the scores in ascending order
-			}).slice(0, 10); // take the closest 10 words (we do not care about their actual distance)
-			words = words.filter(function(el) { return el.score < 22 }); // now take the words which are at most 25 units
+			}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
+			words = words.filter(function(el) { return el.score < radius }); // now take the words which are at most `radius` units
 			for (var j = 0; j < words.length; j++) {
 				words[j] = words[j].word; // drop the distance attribute
 			}
@@ -201,11 +205,11 @@ function hashCode(str) {
 	return hash;
 }
 
-function getMatches(searchText) {
+function getMatches(searchText, knn, radius) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
 	Each value in the returned array will be highlited and the results will be sent back to the popup. */
-	var searchTexts = expandSearchText(searchText);
+	var searchTexts = expandSearchText(searchText, knn, radius);
 
 	highlite(searchTexts); // highlight original searchText and its expansions
 
