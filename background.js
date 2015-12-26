@@ -2,7 +2,7 @@
 MIT license */
 
 var vectors;
-$.getJSON("./vectors_dict.json", function(json) {
+$.getJSON("./glove_dict.json", function(json) {
 	vectors = json;
 	console.log('word2vec dictionary loaded!');
 });

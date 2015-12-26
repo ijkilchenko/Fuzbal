@@ -153,7 +153,7 @@ function expandSearchText(searchText, knn, radius) {
 			words = words.sort(function(elem1, elem2) {
 				return elem1.score - elem2.score; // sort the words array by the scores in ascending order
 			}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
-			words = words.filter(function(el) { return el.score < radius }); // now take the words which are at most `radius` units
+			//words = words.filter(function(el) { return el.score < radius }); // now take the words which are at most `radius` units
 			for (var j = 0; j < words.length; j++) {
 				words[j] = words[j].word; // drop the distance attribute
 			}
