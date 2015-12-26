@@ -110,9 +110,11 @@ function expandSearchText(searchText, knn, radius) {
 	}
 	// following nested for-loop looks for words close in edit-distance to the search words to find substitutes
 	for (var i = 0; i < searchTextWords.length; i++) {
-		if (searchTextWords[i].length > 3) { // we only care if the word is at least 4 letters long (before we assume spelling mistakes are made)
+		if (searchTextWords[i].length > 3 &&  // we only care if the word is at least 4 letters long (before we assume spelling mistakes are made)
+			stopWords.words.indexOf(searchTextWords[i]) == -1) {
 			for (var j = 0; j < sanitizedUniqueVisibleWords.length; j++) {
-				if (sanitizedUniqueVisibleWords[j].length > 2) {
+				if (sanitizedUniqueVisibleWords[j].length > 3 &&
+					stopWords.words.indexOf(sanitizedUniqueVisibleWords[j]) == -1) {
 					distance = dl(searchTextWords[i], sanitizedUniqueVisibleWords[j]);
 					if (distance < 2) { // if there is only 1 atomic operation (insert, deletion, substitution, transposition) difference
 						substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat([sanitizedUniqueVisibleWords[j]]);
@@ -125,43 +127,45 @@ function expandSearchText(searchText, knn, radius) {
 			substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
 		}
 	}
+	for (var i = 0; i < searchTextWords.length; i++) { // for every word in the searchText and their substitutions
+		for (var s = 0; s < substitutions[searchTextWords[i]].length; s++) {
+			var sub = substitutions[searchTextWords[i]][s];
+			/* We try to expand a word under the following conditions:
+			(1) word must be larger than 2 characters (otherwise we waste time on words that probably don't help)
+			(2) word is not in the stopWords list (we don't want to find all the similar words to "to", "i", etc.) and
+			(3) word we are expanding is actually one we know the vector for */
+			if (sub.length > 2 &&
+				stopWords.words.indexOf(sub) == -1 &&
+				sub in localWords2Vects) {
 
-	for (var i = 0; i < searchTextWords.length; i++) { // for every word in the searchText and
-		/* We try to expand a word under the following conditions:
-		(1) word must be larger than 2 characters (otherwise we waste time on words that probably don't help)
-		(2) word is not in the stopWords list (we don't want to find all the similar words to "to", "i", etc.) and
-		(3) word we are expanding is actually one we know the vector for */
-		if (searchTextWords[i].length > 2 &&
-			stopWords.words.indexOf(searchTextWords[i]) == -1 &&
-			searchTextWords[i] in localWords2Vects) {
-
-			var vector = localWords2Vects[searchTextWords[i]];
-			var words = []; // where we keep all the similar words
-			for (var j = 0; j < sanitizedUniqueVisibleWords.length; j++) { // for every unique word on the page
-				/* The word expansions must also be:
-				(1) similar word must be larger than 2 characters
-				(2) not stop words themselves and
-				(3) we must know the vector for them */
-				if (sanitizedUniqueVisibleWords[j].length > 2 &&
-					stopWords.words.indexOf(sanitizedUniqueVisibleWords[j]) == -1 && 
-					sanitizedUniqueVisibleWords[j] in localWords2Vects) {
-					// each element in words contains the similar word and the distance (score) between the vectors between the pair of words
-					words[words.length] = {'word' : sanitizedUniqueVisibleWords[j], // the similar word
-					'score' : getDistance(localWords2Vects[sanitizedUniqueVisibleWords[j]], vector)}; 
+				var vector = localWords2Vects[sub];
+				var words = []; // where we keep all the similar words
+				for (var j = 0; j < sanitizedUniqueVisibleWords.length; j++) { // for every unique word on the page
+					/* The word expansions must also be:
+					(1) similar word must be larger than 2 characters
+					(2) not stop words themselves and
+					(3) we must know the vector for them */
+					if (sanitizedUniqueVisibleWords[j].length > 2 &&
+						stopWords.words.indexOf(sanitizedUniqueVisibleWords[j]) == -1 && 
+						sanitizedUniqueVisibleWords[j] in localWords2Vects) {
+						// each element in words contains the similar word and the distance (score) between the vectors between the pair of words
+						words[words.length] = {'word' : sanitizedUniqueVisibleWords[j], // the similar word
+						'score' : getDistance(localWords2Vects[sanitizedUniqueVisibleWords[j]], vector)}; 
+					}
 				}
+				words = words.sort(function(elem1, elem2) {
+					return elem1.score - elem2.score; // sort the words array by the scores in ascending order
+				}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
+				//words = words.filter(function(el) { return el.score < radius }); // now take the words which are at most `radius` units
+				for (var j = 0; j < words.length; j++) {
+					words[j] = words[j].word; // drop the distance attribute
+				}
+				substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat(words); // map the word in the searchText to an array of similar words
 			}
-			words = words.sort(function(elem1, elem2) {
-				return elem1.score - elem2.score; // sort the words array by the scores in ascending order
-			}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
-			//words = words.filter(function(el) { return el.score < radius }); // now take the words which are at most `radius` units
-			for (var j = 0; j < words.length; j++) {
-				words[j] = words[j].word; // drop the distance attribute
+			/* Performance condition. Any word shall only have at most 10 substitutions. */
+			if (substitutions[searchTextWords[i]].length > 10) {
+				substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
 			}
-			substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat(words); // map the word in the searchText to an array of similar words
-		}
-		/* Performance condition. Any word shall only have at most 10 substitutions. */
-		if (substitutions[searchTextWords[i]].length > 10) {
-			substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
 		}
 
 	}
