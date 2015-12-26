@@ -30,11 +30,16 @@ function parseDom() {
 	sanitizedVisibleText, joined across every visible element on the page. We also want to find the vocabulary of the tab, 
 	the unique words on the page, sanitizedUniqueVisibleWords, and use those to order a local word2vec dictionary. */
 
-	var visibleWords = sanitize($(document.body).children(":visible").text()).split(' ').filter(function(el) { return el.length != 0 });
+	sanitizedVisibleText = $(document.body).children(":visible").text();
 
-	sanitizedVisibleText = visibleWords.join(' '); // the clean text used for actual matches later
+	var visibleWords = sanitizedVisibleText.split(' ');
 
-	sanitizedUniqueVisibleWords = visibleWords.filter(function(elem, i, array){ return array.indexOf(elem) === i });
+	var uniqueWords = new Set();
+	visibleWords.forEach(function(word) {
+    	uniqueWords.add(sanitize(word)); 
+	});
+
+	sanitizedUniqueVisibleWords = Array.from(uniqueWords);
 
 	portB2.postMessage({words: sanitizedUniqueVisibleWords}); // order the vectors via the vectorsLookup port
 }
