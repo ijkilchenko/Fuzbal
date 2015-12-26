@@ -59,10 +59,7 @@ chrome.runtime.onConnect.addListener(function(portP) {
 			clearHighlighting();
 			searchText = sanitize(searchText);
 			if (searchText.length > 0) {
-				matches = getMatches(searchText, 10, 100);
-				if (matches.length == 0) {
-					matches = getMatches(searchText, 20, 200);	
-				}
+				matches = getMatches(searchText, 10); // only consider the top 10 nearest neighbors
 				portP.postMessage({matches: matches});
 			} else {
 				portP.postMessage({matches: []}); // send empty list back if nothing is in the searchText input box
@@ -98,7 +95,7 @@ function scrollToHighlite(matchesSelectedCount) {
 	}
 }
 
-function expandSearchText(searchText, knn, radius) {
+function expandSearchText(searchText, knn) {
 	var searchTextWords = searchText.split(' ');
 	var searchTexts = [searchText]; // original search text must be returned no matter what
 
@@ -156,7 +153,6 @@ function expandSearchText(searchText, knn, radius) {
 				words = words.sort(function(elem1, elem2) {
 					return elem1.score - elem2.score; // sort the words array by the scores in ascending order
 				}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
-				//words = words.filter(function(el) { return el.score < radius }); // now take the words which are at most `radius` units
 				for (var j = 0; j < words.length; j++) {
 					words[j] = words[j].word; // drop the distance attribute
 				}
@@ -209,11 +205,11 @@ function hashCode(str) {
 	return hash;
 }
 
-function getMatches(searchText, knn, radius) {
+function getMatches(searchText, knn) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
 	Each value in the returned array will be highlited and the results will be sent back to the popup. */
-	var searchTexts = expandSearchText(searchText, knn, radius);
+	var searchTexts = expandSearchText(searchText, knn);
 
 	highlite(searchTexts); // highlight original searchText and its expansions
 
@@ -347,5 +343,5 @@ function getDistance(v1, v2) {
 	for (var i = 0; i < v1.length; i++) {
 		s += Math.pow(v1[i] - v2[i], 2);
 	}
-	return Math.sqrt(s);
+	return s;
 }
