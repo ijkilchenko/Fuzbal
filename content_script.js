@@ -36,7 +36,7 @@ function parseDom() {
 
 	var uniqueWords = new Set();
 	visibleWords.forEach(function(word) {
-    	uniqueWords.add(sanitize(word)); 
+		uniqueWords.add(sanitize(word)); 
 	});
 
 	sanitizedUniqueVisibleWords = Array.from(uniqueWords);
@@ -249,21 +249,21 @@ function getMatches(searchText, knn) {
 				var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
 				matches[matches.length] = {id: id, thisMatch: matches_by_hash[hash].element.innerHTML, 
 					context: text, element: matches_by_hash[hash].element};
-				id += 1;
+					id += 1;
+				}
+				j += 1;
+				if (matches.length > 100) {
+					break;
+				}
 			}
-			j += 1;
+			/* Performance condition. We shall care about the first 100 matches only. */
 			if (matches.length > 100) {
-				break;
+				matches = matches.slice(0, 100);
 			}
+			
 		}
-		/* Performance condition. We shall care about the first 100 matches only. */
-		if (matches.length > 100) {
-			matches = matches.slice(0, 100);
-		}
-		
-	}
 	/* The following block sorts the matches array based on thisMatch attribute and 
-	   how close it is to the original searchText based on the edit-distance score. */ 
+	how close it is to the original searchText based on the edit-distance score. */ 
 	var cache = {};
 	matches = matches.sort(function(elem1, elem2) {
 		var a;
@@ -319,15 +319,15 @@ function _highlite(node, regex) {
 			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement 
 		}
 	} else if (node.nodeType == 1 && 
-			   node.childNodes.length > 0 &&
+		node.childNodes.length > 0 &&
 			   node.tagName != 'SCRIPT' && // don't change script tags
 			   node.tagName != 'STYLE' && // don't change style tags
 			   node.tagName != 'IMG' &&
 			   node.className != 'fzbl_highlite') { // don't look at something we already inserted
-		for (var i = 0; i < node.childNodes.length; i++) {
-			_highlite(node.childNodes[i], regex);
-		}
+	for (var i = 0; i < node.childNodes.length; i++) {
+		_highlite(node.childNodes[i], regex);
 	}
+}
 }
 
 function unhighlite() {
