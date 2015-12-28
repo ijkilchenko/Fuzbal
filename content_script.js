@@ -104,7 +104,7 @@ function expandSearchText(searchText, knn) {
 	var searchTextWords = searchText.split(' ');
 	var searchTexts = [searchText]; // original search text must be returned no matter what
 
-	portB2.postMessage({words: sanitizedUniqueVisibleWords});
+	portB2.postMessage({words: searchTextWords});
 
 	var substitutions = {};
 	for (var i = 0; i < searchTextWords.length; i++) {
