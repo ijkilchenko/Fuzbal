@@ -22,6 +22,14 @@ portB2.onMessage.addListener(function(msg) {
 	for (var word in msg.localWords2Vects){
 		localWords2Vects[word] = msg.localWords2Vects[word];
 	}
+
+	var portP2 = chrome.runtime.connect({name: "sendBackMatches"});
+	if (lastSearchText.length > 0) {
+		matches = getMatches(lastSearchText, 10); // only consider the top 10 nearest neighbors
+		portP2.postMessage({matches: matches});
+	} else {
+		portP2.postMessage({matches: []}); // send empty list back if nothing is in the searchText input box
+	}
 });
 
 function parseDom() {
@@ -63,12 +71,8 @@ chrome.runtime.onConnect.addListener(function(portP) {
 
 			clearHighlighting();
 			searchText = sanitize(searchText);
-			if (searchText.length > 0) {
-				matches = getMatches(searchText, 10); // only consider the top 10 nearest neighbors
-				portP.postMessage({matches: matches});
-			} else {
-				portP.postMessage({matches: []}); // send empty list back if nothing is in the searchText input box
-			}
+			var searchTextWords = searchText.split(' ');
+			portB2.postMessage({words: searchTextWords});
 		});
 		portP.onDisconnect.addListener(function(msg) {
 			clearHighlighting();
@@ -103,8 +107,6 @@ function scrollToHighlite(matchesSelectedCount) {
 function expandSearchText(searchText, knn) {
 	var searchTextWords = searchText.split(' ');
 	var searchTexts = [searchText]; // original search text must be returned no matter what
-
-	portB2.postMessage({words: searchTextWords});
 
 	var substitutions = {};
 	for (var i = 0; i < searchTextWords.length; i++) {

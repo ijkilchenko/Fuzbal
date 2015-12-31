@@ -7,6 +7,20 @@ Mustache.parse(template);
 var matchesSelectedCount = 0;
 var lastMsgWithMatches;
 
+chrome.runtime.onConnect.addListener(function(port) {
+	if (port.name == "sendBackMatches") {
+		port.onMessage.addListener(function(msg) {
+			handleMsg(msg);
+		});
+	}
+});
+
+function handleMsg(msg) {
+	lastMsgWithMatches = msg;
+	matchesSelectedCount = 0;
+	render(msg, matchesSelectedCount);
+}
+
 function sendAndReceive() {
 	var searchText = document.getElementById("searchText").value;
 
@@ -21,9 +35,7 @@ function sendAndReceive() {
 			var port = chrome.tabs.connect(tabs[0].id, {name: "fromSendAndReceive"});
 			port.postMessage({searchText: searchText});
 			port.onMessage.addListener(function(msg) {
-				lastMsgWithMatches = msg;
-				matchesSelectedCount = 0;
-				render(msg, matchesSelectedCount);
+				handleMsg(msg);
 			});
 		});
 	}
