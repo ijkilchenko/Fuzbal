@@ -7,6 +7,7 @@ var localWords2Vects = {}; // subset of the whole word2vec dictionary of words t
 
 var highlited; // span elements which are currently highlighted
 var lastSearchText = ''; // used to populate the popup after being closed
+var doNotEscape = true; // are we searching using a regular expression?
 
 var previousMatchesSelectedCount = 0;
 
@@ -71,9 +72,19 @@ chrome.runtime.onConnect.addListener(function(portP) {
 			lastSearchText = searchText.substring(0, 50); // update the last searched text 
 
 			clearHighlighting();
-			searchText = sanitize(searchText);
-			/* Performance condition: only keep the first 6 words of a query */
-			var searchTextWords = searchText.split(' ').splice(0, 6);
+			var searchTextWords;
+			// Check if we passed a regular expression (lastSearchText must start and end with a forward-slash)
+			console.log('start:' + lastSearchText.slice(0, 1));
+			console.log('end: ' + lastSearchText.slice(lastSearchText.length-1, lastSearchText.length));
+			if (lastSearchText.slice(0, 1) == '/' && lastSearchText.slice(lastSearchText.length-1, lastSearchText.length) == '/' && lastSearchText.length > 2) {
+				searchTextWords = [];
+				doNotEscape = true;
+			} else {
+				searchText = sanitize(searchText);
+				/* Performance condition: only keep the first 6 words of a query */
+				searchTextWords = searchText.split(' ').splice(0, 6);
+				doNotEscape = false;
+			}
 			portB2.postMessage({words: searchTextWords});
 		});
 		portP.onDisconnect.addListener(function(msg) {
@@ -218,7 +229,14 @@ function getMatches(searchText, knn) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
 	Each value in the returned array will be highlited and the results will be sent back to the popup. */
-	var searchTexts = expandSearchText(searchText, knn);
+	console.log(searchText);
+	console.log(doNotEscape);
+	if (doNotEscape == true) {
+		var searchTexts = [searchText.slice(1, searchText.length-1)];
+	} else {
+		var searchTexts = expandSearchText(searchText, knn);
+	}
+	console.log(searchTexts);
 
 	highlite(searchTexts); // highlight original searchText and its expansions
 
@@ -252,8 +270,10 @@ function getMatches(searchText, knn) {
 
 	var id = 1; // we use 1-based ids because these will also become the labels in the popup and must be human readable
 	for (var i = 0; i < ordered_matches.length; i++) { // go through each hash (combination or parent element and match)
+		var regex;
 		// try to find the start and end of the sentence with the current match
-		var regex = new RegExp('([^.]{0,200}?)(' +escapeRegExp(ordered_matches[i].element.innerHTML)+')([^.]{0,100}\.{0,1})', 'gi');
+		regex = new RegExp('([^.]{0,200}?)(' + escapeRegExp(ordered_matches[i].element.innerHTML) +')([^.]{0,100}\.{0,1})', 'gi');
+		//console.log(regex);
 		var parent = $(ordered_matches[i].parent).text();
 		var count = ordered_matches[i].count; // the number of matches in the current parent element
 		var j = 0;
@@ -305,15 +325,21 @@ function getMatches(searchText, knn) {
 }
 
 function highlite(phrases) {
-	for (var i = 0; i < phrases.length; i++) {
-		phrases[i] = escapeRegExp(phrases[i]); // before matching, escape any regular expressions
-	}
-	phrases = phrases.join('|'); // look for any of the searchText expansions
-	if (phrases.length > 0) {
-		var pattern = '(' + phrases + ')';
-		var regex = new RegExp(pattern, 'i');
-
+	if (doNotEscape == true) {
+		var regex = new RegExp(phrases[0], 'i');
+		console.log(regex);
 		_highlite(document.body, regex);
+	} else {
+		for (var i = 0; i < phrases.length; i++) {
+			phrases[i] = escapeRegExp(phrases[i]); // before matching, escape any regular expressions
+		}
+		phrases = phrases.join('|'); // look for any of the searchText expansions
+		if (phrases.length > 0) {
+			var pattern = '(' + phrases + ')';
+			var regex = new RegExp(pattern, 'i');
+			//console.log(regex);
+			_highlite(document.body, regex);
+		}
 	}
 }
 
