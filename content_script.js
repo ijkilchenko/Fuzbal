@@ -228,17 +228,6 @@ function escapeRegExp(str) {
 	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 }
 
-function hashCode(str) {
-	/* Reference: http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery */
-	var hash = 0;
-	for (i = 0; i < str.length; i++) {
-		char = str.charCodeAt(i);
-		hash = ((hash<<5)-hash)+char;
-		hash = hash & hash;
-	}
-	return hash;
-}
-
 function getMatches(searchText, knn) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
@@ -252,59 +241,32 @@ function getMatches(searchText, knn) {
 
 	highlited = document.getElementsByClassName('fzbl_highlite');
 	console.log('number of highlited: ' + highlited.length);
-	
-	var matches_by_hash = {}; // we count the number matches in each parent element 
-	for (var i = 0; i < highlited.length; i++) {
-		var parent = highlited[i].parentNode;
-		// we hash the context and the match itself
-		var hash = hashCode(parent.innerHTML.substring(0, 60)) + hashCode(highlited[i].innerHTML);
-		if (hash in matches_by_hash) {
-			matches_by_hash[hash].count += 1;
-		} else {
-			matches_by_hash[hash] = {count: 1, parent: parent, element: highlited[i], order: i};
-		}
-		/* Performance condition. We shall care about the first 200 parent-match combinations only. */
-		if (i > 200) {
-			break;
-		}
-	}
 
 	var matches = []; // will hold the match objects to be sent back to the popup
 
-	var ordered_matches = [];
-	for (var hash in matches_by_hash) {
-		ordered_matches[ordered_matches.length] = matches_by_hash[hash];
-	}
-	ordered_matches = ordered_matches.sort(function(elem1, elem2) {
-		return elem1.order - elem2.order;
-	});
-
 	var id = 1; // we use 1-based ids because these will also become the labels in the popup and must be human readable
-	for (var i = 0; i < ordered_matches.length; i++) { // go through each hash (combination or parent element and match)
+	for (var i = 0; i < highlited.length; i++) { // go through each hash (combination or parent element and match)
 		var regex;
 		// try to find the start and end of the sentence with the current match
-		regex = new RegExp('([^.]{0,100}?)(' + ordered_matches[i].element.innerHTML +')([^.]{0,100}\.{0,1})', 'gi');
-		var parent = $(ordered_matches[i].parent).text();
-		var count = ordered_matches[i].count; // the number of matches in the current parent element
-		var j = 0;
-		while (j < count) {
+		regex = new RegExp('([^.]{0,100}?)(' + highlited[i].innerHTML +')([^.]{0,100}\.{0,1})', 'gi');
+		var parent = $(highlited[i].parentNode).text();
+		do {
 			var m = regex.exec(parent);
 			if (m) {
 				var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
-				matches[matches.length] = {id: id, thisMatch: ordered_matches[i].element.innerHTML, context: text, 
-					element: ordered_matches[i].element};
+				matches[matches.length] = {id: id, thisMatch: highlited[i].innerHTML, context: text, 
+					element: highlited[i]};
 					id += 1;
-				}
-				j += 1;
-				if (matches.length > 100) {
-					break;
-				}
 			}
-			/* Performance condition. We shall care about the first 100 matches only. */
 			if (matches.length > 100) {
-				matches = matches.slice(0, 100);
-			}	
+				break;
+			}
+		} while (m);
+		/* Performance condition. We shall care about the first 100 matches only. */
+		if (matches.length > 100) {
+			matches = matches.slice(0, 100);
 		}
+	}
 	/* The following block sorts the matches array based on thisMatch attribute and 
 	how close it is to the original searchText based on the edit-distance score. */ 
 	var cache = {};
