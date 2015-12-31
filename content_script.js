@@ -12,7 +12,7 @@ var previousMatchesSelectedCount = 0;
 
 function sanitize(str) {
 	// remove any "bad" character and lower case everything remaining and trim
-	return str.replace(/[^a-zA-Z ]/g, "").toLowerCase().trim();
+	return str.replace(/[^a-zA-Z0-9 ]/g, "").toLowerCase().trim();
 }
 
 var portB2 = chrome.runtime.connect({name: "vectorsLookup"});
