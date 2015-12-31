@@ -47,17 +47,16 @@
 
     <div id="template" style="display:none">
       {{#msg}}
+      <p>{{numMatches}} matches</p>
+      {{#matchesBeforeSelected}}
+      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
+      {{/matchesBeforeSelected}}
       {{#matchesSelected}}
-      <p>{{id}} of {{numMatches}}</p>
       <span id="{{id}}" class="matchItem"><li><b><span style="background-color:#00FF00">{{thisMatch}}</span>: </b>{{{context}}}</li></span>
       {{/matchesSelected}}
       {{#matchesAfterSelected}}
       <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
       {{/matchesAfterSelected}}
-      <hr/>
-      {{#matchesBeforeSelected}}
-      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
-      {{/matchesBeforeSelected}}
       {{/msg}}
     </div>
 
