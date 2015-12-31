@@ -1,6 +1,6 @@
 {
   "name": "Fuzbal",
-  "version": "0.94",
+  "version": "0.95",
   "manifest_version": 2,
   "description": "Gives Ctrl+F like find results which include non-exact (fuzzy) matches. ",
   "icons": {
