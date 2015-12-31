@@ -126,6 +126,7 @@ var tips = ['<b>Tip:</b> Try <b>Ctrl+Shift+K</b> (<b>Command</b> on a Mac) to op
 '<b>Tip:</b> Clicking on a find result will scroll your window to where the result appears on the page. ', 
 '<b>Tip:</b> Press ENTER to go down the match list. ', 
 '<b>Tip:</b> Use UP/DOWN keys to cycle up and down the match list. ', 
+'<b>Tip:</b> Use double quotes for exact matches. ', 
 '<b>Tip:</b> To search using regular expressions, start and end with "/" (e.g. /foob[ae]r/). ', 
 '<b>Info:</b> The current find result is highlighted in green and others are highlighted in yellow. '];
 

@@ -4,8 +4,9 @@ MIT license */
 var sanitizedVisibleText; // holds all the visible text on current tab as a string (after sanitization)
 var sanitizedUniqueVisibleWords; // array of the vocabulary of sanitized words on current tab
 var localWords2Vects = {}; // subset of the whole word2vec dictionary of words that appear on current tab
+var stopWords; // English stopwords
 
-var highlited; // span elements which are currently highlighted
+var highlited = []; // span elements which are currently highlighted
 var lastSearchText = ''; // used to populate the popup after being closed
 var doNotEscape = true; // are we searching using a regular expression?
 
@@ -16,7 +17,6 @@ function sanitize1(str) {
 	return str.replace(/[^a-zA-Z0-9" ]/g, "").toLowerCase().trim();
 }
 function sanitize2(str) {
-	// remove any "bad" character and lower case everything remaining and trim
 	return str.replace(/[^a-zA-Z0-9 ]/g, "").toLowerCase().trim();
 }
 
@@ -30,11 +30,16 @@ portB2.onMessage.addListener(function(msg) {
 
 	var portP2 = chrome.runtime.connect({name: "sendBackMatches"});
 	if (lastSearchText.length > 0) {
-		matches = getMatches(lastSearchText, 10); // only consider the top 10 nearest neighbors
+		matches = getMatches(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
 		portP2.postMessage({matches: matches});
 	} else {
 		portP2.postMessage({matches: []}); // send empty list back if nothing is in the searchText input box
 	}
+});
+
+var portB1 = chrome.runtime.connect({name: "stopWordsLookup"});
+portB1.onMessage.addListener(function(msg) {
+	stopWords = msg.stopWords;
 });
 
 function parseDom() {
@@ -49,24 +54,18 @@ function parseDom() {
 
 	var uniqueWords = new Set();
 	visibleWords.forEach(function(word) {
-		uniqueWords.add(sanitize1(word)); 
+		uniqueWords.add(sanitize2(word)); 
 	});
 
 	sanitizedUniqueVisibleWords = Array.from(uniqueWords);
 
 	portB2.postMessage({words: sanitizedUniqueVisibleWords}); // order the vectors via the vectorsLookup port
+	portB1.postMessage({}); // ask to get stop words (from background page which loaded them from a json)
 }
 
 parseDom(); // we can start parsing the DOM without loading any functions below
 
 var dl = DamerauLevenshtein({}, true); // instantiate the edit-distance object
-
-var stopWords; // English stopwords
-var portB1 = chrome.runtime.connect({name: "stopWordsLookup"});
-portB1.postMessage({}); // ask to get stop words (from background page which loaded them from a json)
-portB1.onMessage.addListener(function(msg) {
-	stopWords = msg.stopWords;
-});
 
 chrome.runtime.onConnect.addListener(function(portP) {
 	if (portP.name == "fromSendAndReceive") {
@@ -82,7 +81,7 @@ chrome.runtime.onConnect.addListener(function(portP) {
 				searchTextWords = [];
 				doNotEscape = true;
 			} else {
-				searchText = sanitize1(searchText);
+				searchText = sanitize1(lastSearchText); // sanitize but keep double quotes
 				/* Performance condition: only keep the first 6 words of a query */
 				searchTextWords = searchText.split(' ').splice(0, 6);
 				doNotEscape = false;
@@ -108,7 +107,7 @@ function clearHighlighting() {
 }
 
 function scrollToHighlite(matchesSelectedCount) {
-	if (highlited && highlited.length && highlited.length > 0 && previousMatchesSelectedCount < highlited.length) {
+	if (highlited.length > 0 && previousMatchesSelectedCount < highlited.length) {
 		highlited[previousMatchesSelectedCount].style.backgroundColor  = '#ffef14';
 		var currentHighlited = highlited[matchesSelectedCount];
 		currentHighlited.style.backgroundColor = '#00FF00';
@@ -130,7 +129,7 @@ function expandSearchText(searchText, knn) {
 	// following nested for-loop looks for words close in edit-distance to the search words to find substitutes
 	for (var i = 0; i < searchTextWords.length; i++) {
 		if (searchTextWords[i].slice(0, 1) == '"' && searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) == '"' && searchTextWords[i].length > 2) {
-			substitutions[searchTextWords[i]] = [searchTextWords[i].slice(1, searchTextWords[i].length-1)];
+			substitutions[searchTextWords[i]] = [escapeRegExp(searchTextWords[i].slice(1, searchTextWords[i].length-1))];
 		} else {
 			if (searchTextWords[i].length > 3 &&  // we only care if the word is at least 4 letters long (before we assume spelling mistakes are made)
 				stopWords.words.indexOf(searchTextWords[i]) == -1) {
@@ -142,6 +141,10 @@ function expandSearchText(searchText, knn) {
 							substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat([sanitizedUniqueVisibleWords[j]]);
 						}
 					}
+					/* Performance condition. Any word shall only have at most 10 substitutions. */
+					if (substitutions[searchTextWords[i]].length > 10) {
+						break;
+					}
 				}
 			}
 		}
@@ -152,15 +155,15 @@ function expandSearchText(searchText, knn) {
 	}
 	for (var i = 0; i < searchTextWords.length; i++) { // for every word in the searchText and their substitutions
 		if (searchTextWords[i].slice(0, 1) == '"' && searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) == '"' && searchTextWords[i].length > 2) {
-			substitutions[searchTextWords[i]] = [searchTextWords[i].slice(1, searchTextWords[i].length-1)];
+			substitutions[searchTextWords[i]] = [escapeRegExp(searchTextWords[i].slice(1, searchTextWords[i].length-1))];
 		} else {
 			for (var s = 0; s < substitutions[searchTextWords[i]].length; s++) {
 				var sub = substitutions[searchTextWords[i]][s];
 				/* We try to expand a word under the following conditions:
-				(1) word must be larger than 2 characters (otherwise we waste time on words that probably don't help)
+				(1) word must be larger than 3 characters (otherwise we waste time on words that probably don't help)
 				(2) word is not in the stopWords list (we don't want to find all the similar words to "to", "i", etc.) and
 				(3) word we are expanding is actually one we know the vector for */
-				if (sub.length > 2 &&
+				if (sub.length > 3 &&
 					stopWords.words.indexOf(sub) == -1 &&
 					sub in localWords2Vects) {
 
@@ -171,7 +174,7 @@ function expandSearchText(searchText, knn) {
 						(1) similar word must be larger than 2 characters
 						(2) not stop words themselves and
 						(3) we must know the vector for them */
-						if (sanitizedUniqueVisibleWords[j].length > 2 &&
+						if (sanitizedUniqueVisibleWords[j].length > 3 &&
 							stopWords.words.indexOf(sanitizedUniqueVisibleWords[j]) == -1 && 
 							sanitizedUniqueVisibleWords[j] in localWords2Vects) {
 							// each element in words contains the similar word and the distance (score) between the vectors between the pair of words
@@ -182,6 +185,7 @@ function expandSearchText(searchText, knn) {
 					words = words.sort(function(elem1, elem2) {
 						return elem1.score - elem2.score; // sort the words array by the scores in ascending order
 					}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
+					words = words.filter(function(el) { return el.score < 100 }); // use only the words where the distance squared is less than 100
 					for (var j = 0; j < words.length; j++) {
 						words[j] = words[j].word; // drop the distance attribute
 					}
@@ -191,7 +195,6 @@ function expandSearchText(searchText, knn) {
 				if (substitutions[searchTextWords[i]].length > 10) {
 					substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
 				}
-				
 			}
 		}
 	}
@@ -248,12 +251,13 @@ function getMatches(searchText, knn) {
 	highlite(searchTexts); // highlight original searchText and its expansions
 
 	highlited = document.getElementsByClassName('fzbl_highlite');
+	console.log('number of highlited: ' + highlited.length);
 	
 	var matches_by_hash = {}; // we count the number matches in each parent element 
 	for (var i = 0; i < highlited.length; i++) {
 		var parent = highlited[i].parentNode;
 		// we hash the context and the match itself
-		var hash = hashCode(parent.innerHTML.substring(0, 30)) + hashCode(highlited[i].innerHTML);
+		var hash = hashCode(parent.innerHTML.substring(0, 60)) + hashCode(highlited[i].innerHTML);
 		if (hash in matches_by_hash) {
 			matches_by_hash[hash].count += 1;
 		} else {
@@ -279,7 +283,7 @@ function getMatches(searchText, knn) {
 	for (var i = 0; i < ordered_matches.length; i++) { // go through each hash (combination or parent element and match)
 		var regex;
 		// try to find the start and end of the sentence with the current match
-		regex = new RegExp('([^.]{0,200}?)(' + escapeRegExp(ordered_matches[i].element.innerHTML) +')([^.]{0,100}\.{0,1})', 'gi');
+		regex = new RegExp('([^.]{0,100}?)(' + ordered_matches[i].element.innerHTML +')([^.]{0,100}\.{0,1})', 'gi');
 		var parent = $(ordered_matches[i].parent).text();
 		var count = ordered_matches[i].count; // the number of matches in the current parent element
 		var j = 0;
@@ -287,8 +291,8 @@ function getMatches(searchText, knn) {
 			var m = regex.exec(parent);
 			if (m) {
 				var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
-				matches[matches.length] = {id: id, thisMatch: ordered_matches[i].element.innerHTML, 
-					context: text, element: ordered_matches[i].element};
+				matches[matches.length] = {id: id, thisMatch: ordered_matches[i].element.innerHTML, context: text, 
+					element: ordered_matches[i].element};
 					id += 1;
 				}
 				j += 1;
@@ -299,8 +303,7 @@ function getMatches(searchText, knn) {
 			/* Performance condition. We shall care about the first 100 matches only. */
 			if (matches.length > 100) {
 				matches = matches.slice(0, 100);
-			}
-			
+			}	
 		}
 	/* The following block sorts the matches array based on thisMatch attribute and 
 	how close it is to the original searchText based on the edit-distance score. */ 
@@ -327,6 +330,7 @@ function getMatches(searchText, knn) {
 		highlited[highlited.length] = matches[i].element;
 		matches[i].id = i + 1;
 	}
+	console.log('number of matches: ' + matches.length);
 	return matches;
 }
 
@@ -362,16 +366,16 @@ function _highlite(node, regex) {
 			highlited.appendChild(wordClone); // add the match text
 			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement 
 		}
-	} else if (node.nodeType == 1 && 
-		node.childNodes.length > 0 &&
-			   node.tagName != 'SCRIPT' && // don't change script tags
-			   node.tagName != 'STYLE' && // don't change style tags
-			   node.tagName != 'IMG' &&
-			   node.className != 'fzbl_highlite') { // don't look at something we already inserted
-	for (var i = 0; i < node.childNodes.length; i++) {
-		_highlite(node.childNodes[i], regex);
+	} else if (node.nodeType == 1 &&
+				node.childNodes.length > 0 &&
+				node.tagName != 'SCRIPT' && // don't change script tags
+				node.tagName != 'STYLE' && // don't change style tags
+				node.tagName != 'IMG' &&
+				node.className != 'fzbl_highlite') { // don't look at something we already inserted
+		for (var i = 0; i < node.childNodes.length; i++) {
+			_highlite(node.childNodes[i], regex);
+		}
 	}
-}
 }
 
 function unhighlite() {
