@@ -67,11 +67,13 @@ chrome.runtime.onConnect.addListener(function(portP) {
 	if (portP.name == "fromSendAndReceive") {
 		portP.onMessage.addListener(function(msg) {
 			var searchText = msg.searchText;
-			lastSearchText = searchText; // update the last searched text
+			/* Performance condition: only keep the first 50 characters of a query */
+			lastSearchText = searchText.substring(0, 50); // update the last searched text 
 
 			clearHighlighting();
 			searchText = sanitize(searchText);
-			var searchTextWords = searchText.split(' ');
+			/* Performance condition: only keep the first 6 words of a query */
+			var searchTextWords = searchText.split(' ').splice(0, 6);
 			portB2.postMessage({words: searchTextWords});
 		});
 		portP.onDisconnect.addListener(function(msg) {
