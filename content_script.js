@@ -16,6 +16,7 @@ function sanitize1(str) {
 	// remove any "bad" character and lower case everything remaining and trim
 	return str.replace(/[^a-zA-Z0-9" ]/g, "").toLowerCase().trim();
 }
+
 function sanitize2(str) {
 	return str.replace(/[^a-zA-Z0-9 ]/g, "").toLowerCase().trim();
 }
@@ -72,7 +73,7 @@ chrome.runtime.onConnect.addListener(function(portP) {
 		portP.onMessage.addListener(function(msg) {
 			var searchText = msg.searchText;
 			/* Performance condition: only keep the first 50 characters of a query */
-			lastSearchText = searchText.substring(0, 50); // update the last searched text 
+			lastSearchText = searchText.substring(0, 50).toLowerCase(); // update the last searched text 
 
 			clearHighlighting();
 			var searchTextWords;
@@ -292,7 +293,9 @@ function getMatches(searchText, knn) {
 	return matches;
 }
 
+var numHighlited;
 function highlite(phrases) {
+	numHighlited = 0;
 	if (doNotEscape == true) {
 		var regex = new RegExp(phrases[0], 'i');
 		_highlite(document.body, regex);
@@ -312,7 +315,7 @@ function highlite(phrases) {
 function _highlite(node, regex) {
 	if (node.nodeType == 3) {
 		var match = node.data.match(regex);
-		if (match) {
+		if (match && numHighlited < 500) {
 			/* If there is a match, we will split the original node into three parts. 
 			A node with text before the match, a node with the match text, and a node with text after the match. */
 			var highlited = document.createElement('span'); // we will wrap our match inside a new span element
@@ -323,10 +326,13 @@ function _highlite(node, regex) {
 			var wordClone = matchElement.cloneNode(false); 
 			highlited.appendChild(wordClone); // add the match text
 			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement 
+			numHighlited += 1;
 		}
 	} else if (node.nodeType == 1 && node.childNodes.length > 0 && node.tagName != 'SCRIPT' && node.tagName != 'STYLE' && node.tagName != 'IMG' && node.className != 'fzbl_highlite') { 
 		for (var i = 0; i < node.childNodes.length; i++) {
-			_highlite(node.childNodes[i], regex);
+			if (numHighlited < 500) {
+				_highlite(node.childNodes[i], regex);
+			}
 		}
 	}
 }
