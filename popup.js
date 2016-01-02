@@ -64,7 +64,7 @@ function render(msg, matchesSelectedCount) {
 	if (numMatches > 0) {
 		$(document.getElementById("matchesList")).show();
 		if (numMatches > 99) {
-			numMatches = 'many';
+			numMatches = 'Many';
 		}
 		rendered = Mustache.render(template, {msg: {numMatches : numMatches, 
 			matchesBeforeSelected: matchesBeforeSelected, matchesSelected: matchesSelected, matchesAfterSelected: matchesAfterSelected}});
@@ -79,7 +79,7 @@ if (document.addEventListener ){
 		var targetElement = event.target || event.srcElement;
 		do {
 			if (targetElement.getAttribute('class') == 'matchItem') {
-				matchesSelectedCount = targetElement.getAttribute('id') - 1;
+				matchesSelectedCount = targetElement.getAttribute('id');
 				render(lastMsgWithMatches, matchesSelectedCount);
 				break;
 			} else {
@@ -87,11 +87,7 @@ if (document.addEventListener ){
 			}
 		} while (targetElement.parentNode);
 	});
-} else if (document.attachEvent) {    
-	document.attachEvent("onclick", function(){
-		var targetElement = event.target || event.srcElement;
-	});
-}
+} 
 
 document.getElementById("searchText").addEventListener("keyup", function(e) {
 	if ([13, 37, 38, 39, 40].indexOf(e.keyCode) == -1) {

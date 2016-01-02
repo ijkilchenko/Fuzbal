@@ -240,28 +240,42 @@ function getMatches(searchText, knn) {
 	highlite(searchTexts); // highlight original searchText and its expansions
 
 	highlited = document.getElementsByClassName('fzbl_highlite');
-	console.log('number of highlited: ' + highlited.length);
 
 	var matches = []; // will hold the match objects to be sent back to the popup
-
-	var id = 1; // we use 1-based ids because these will also become the labels in the popup and must be human readable
-	for (var i = 0; i < highlited.length; i++) { // go through each hash (combination or parent element and match)
+	var hashes = {};
+	for (var i = 0; i < highlited.length; i++) {
+		console.log(hashes);
 		var regex;
 		// try to find the start and end of the sentence with the current match
 		regex = new RegExp('([^.]{0,100}?)(' + highlited[i].innerHTML +')([^.]{0,100}\.{0,1})', 'gi');
 		var parent = $(highlited[i].parentNode).text();
-		do {
-			var m = regex.exec(parent);
-			if (m) {
-				var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
-				matches[matches.length] = {id: id, thisMatch: highlited[i].innerHTML, context: text, 
-					element: highlited[i]};
-					id += 1;
+		hash = parent;
+		if (hash in hashes && highlited[i].innerHTML in hashes[hash]) {
+			var indexOfIndicesToReplace = hashes[hash][highlited[i].innerHTML][0] + 1;
+			var indexToReplace = hashes[hash][highlited[i].innerHTML][1][indexOfIndicesToReplace];
+			console.log(hashes[hash][highlited[i].innerHTML]);
+			console.log('length of matches: ' + matches.length + ' indexToReplace: ' + indexToReplace);
+			matches[indexToReplace].element = highlited[i];
+			hashes[hash][highlited[i].innerHTML][0] += 1;
+		} else {
+			if (hash in hashes) {
+				hashes[hash][highlited[i].innerHTML] = [0, []];
+			} else {
+				hashes[hash] = {};
+				hashes[hash][highlited[i].innerHTML] = [0, []];
 			}
-			if (matches.length > 100) {
-				break;
-			}
-		} while (m);
+			do {
+				var m = regex.exec(parent);
+				if (m) {
+					var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
+					matches[matches.length] = {thisMatch: highlited[i].innerHTML, context: text, element: highlited[i]};
+					hashes[hash][highlited[i].innerHTML][1].push(matches.length);
+				}
+				if (matches.length > 100) {
+					break;
+				}
+			} while (m);
+		}
 		/* Performance condition. We shall care about the first 100 matches only. */
 		if (matches.length > 100) {
 			matches = matches.slice(0, 100);
@@ -290,9 +304,8 @@ function getMatches(searchText, knn) {
 	highlited = [];
 	for (var i = 0; i < matches.length; i++) {
 		highlited[highlited.length] = matches[i].element;
-		matches[i].id = i + 1;
+		matches[i].id = i;
 	}
-	console.log('number of matches: ' + matches.length);
 	return matches;
 }
 
