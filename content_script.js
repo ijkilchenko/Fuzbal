@@ -274,7 +274,7 @@ function getMatches(searchText, knn) {
 				}
 			}
 			var text = left + '<b>' + middle + '</b>' + right;
-			matches[matches.length] = {thisMatch: highlited[i].innerHTML, context: text, element: highlited[i]};
+			matches[matches.length] = {id: i, thisMatch: highlited[i].innerHTML, context: text, element: highlited[i]};
 		}
 		if (matches.length > 100) {
 			matches = matches.slice(0, 100);
@@ -283,24 +283,7 @@ function getMatches(searchText, knn) {
 	}
 	/* The following block sorts the matches array based on thisMatch attribute and 
 	how close it is to the original searchText based on the edit-distance score. */ 
-	var cache = {};
-	matches = matches.sort(function(elem1, elem2) {
-		var a;
-		if (elem1.thisMatch in cache) {
-			a = cache[elem1.thisMatch];
-		} else {
-			a = dl(elem1.thisMatch, searchText.toLowerCase());
-			cache[elem1.thisMatch] = a;
-		}
-		var b;
-		if (elem2.thisMatch in cache) {
-			b = cache[elem2.thisMatch];
-		} else {
-			b = dl(elem2.thisMatch, searchText.toLowerCase());
-			cache[elem2.thisMatch] = b;
-		}
-		return a - b;
-	});
+	matches = mergeSort(matches, searchText); // we use our own stable sort (we need stable so that results appear in the correct order on the page)
 	highlited = [];
 	for (var i = 0; i < matches.length; i++) {
 		highlited[highlited.length] = matches[i].element;
@@ -341,12 +324,7 @@ function _highlite(node, regex) {
 			highlited.appendChild(wordClone); // add the match text
 			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement 
 		}
-	} else if (node.nodeType == 1 &&
-				node.childNodes.length > 0 &&
-				node.tagName != 'SCRIPT' && // don't change script tags
-				node.tagName != 'STYLE' && // don't change style tags
-				node.tagName != 'IMG' &&
-				node.className != 'fzbl_highlite') { // don't look at something we already inserted
+	} else if (node.nodeType == 1 && node.childNodes.length > 0 && node.tagName != 'SCRIPT' && node.tagName != 'STYLE' && node.tagName != 'IMG' && node.className != 'fzbl_highlite') { 
 		for (var i = 0; i < node.childNodes.length; i++) {
 			_highlite(node.childNodes[i], regex);
 		}
@@ -372,4 +350,61 @@ function getDistance(v1, v2) {
 		s += Math.pow(v1[i] - v2[i], 2);
 	}
 	return s;
+}
+
+function mergeSort(arr, searchText) {
+
+	var length = arr.length;
+	var middle = Math.floor(length / 2);
+
+	if (length < 2) {
+		return arr;
+	} else {
+		return merge(mergeSort(arr.slice(0, middle), searchText), mergeSort(arr.slice(middle, length), searchText), searchText);
+	}
+}
+
+var mergeSortCache = {};
+function compare(elem1, elem2, searchText) {
+	var a;
+	if (elem1.thisMatch in mergeSortCache) {
+		a = mergeSortCache[elem1.thisMatch];
+	} else {
+		a = dl(elem1.thisMatch, searchText.toLowerCase());
+		mergeSortCache[elem1.thisMatch] = a;
+	}
+	var b;
+	if (elem2.thisMatch in mergeSortCache) {
+		b = mergeSortCache[elem2.thisMatch];
+	} else {
+		b = dl(elem2.thisMatch, searchText.toLowerCase());
+		mergeSortCache[elem2.thisMatch] = b;
+	}
+	return a -b;
+}
+
+function merge(left, right, searchText) {
+	var result = [];
+
+	while (left.length > 0 || right.length > 0) {
+		if (left.length > 0 && right.length > 0) {
+			if (compare(left[0], right[0], searchText) <= 0) {
+				result.push(left[0]);
+				left = left.slice(1);
+			}
+			else {
+				result.push(right[0]);
+				right = right.slice(1);
+			}
+		}
+		else if (left.length > 0) {
+			result.push(left[0]);
+			left = left.slice(1);
+		}
+		else if (right.length > 0) {
+			result.push(right[0]);
+			right = right.slice(1);
+		}
+	}
+	return result;
 }
