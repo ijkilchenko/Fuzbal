@@ -228,6 +228,7 @@ function escapeRegExp(str) {
 	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 }
 
+var hashes = {};
 function getMatches(searchText, knn) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
@@ -242,43 +243,42 @@ function getMatches(searchText, knn) {
 	highlited = document.getElementsByClassName('fzbl_highlite');
 
 	var matches = []; // will hold the match objects to be sent back to the popup
-	var hashes = {};
 	for (var i = 0; i < highlited.length; i++) {
-		console.log(hashes);
-		var regex;
-		// try to find the start and end of the sentence with the current match
-		regex = new RegExp('([^.]{0,100}?)(' + highlited[i].innerHTML +')([^.]{0,100}\.{0,1})', 'gi');
-		var parent = $(highlited[i].parentNode).text();
-		hash = parent;
-		if (hash in hashes && highlited[i].innerHTML in hashes[hash]) {
-			var indexOfIndicesToReplace = hashes[hash][highlited[i].innerHTML][0] + 1;
-			var indexToReplace = hashes[hash][highlited[i].innerHTML][1][indexOfIndicesToReplace];
-			console.log(hashes[hash][highlited[i].innerHTML]);
-			console.log('length of matches: ' + matches.length + ' indexToReplace: ' + indexToReplace);
-			matches[indexToReplace].element = highlited[i];
-			hashes[hash][highlited[i].innerHTML][0] += 1;
+		var siblings = [];
+		var index;
+		if (highlited[i].parentNode in hashes) {
+			siblings = hashes[highlited[i].parentNode];
 		} else {
-			if (hash in hashes) {
-				hashes[hash][highlited[i].innerHTML] = [0, []];
-			} else {
-				hashes[hash] = {};
-				hashes[hash][highlited[i].innerHTML] = [0, []];
-			}
-			do {
-				var m = regex.exec(parent);
-				if (m) {
-					var text = m[1] + '<b>' + m[2] + '</b>' + m[3];
-					matches[matches.length] = {thisMatch: highlited[i].innerHTML, context: text, element: highlited[i]};
-					hashes[hash][highlited[i].innerHTML][1].push(matches.length);
-				}
-				if (matches.length > 100) {
-					break;
-				}
-			} while (m);
+			siblings = Array.from(highlited[i].parentNode.childNodes);
+			hashes[highlited[i]] = siblings;
 		}
-		/* Performance condition. We shall care about the first 100 matches only. */
+		index = siblings.indexOf(highlited[i]);
+		if (index > -1) {
+			var left = '';
+			if (index > 0) {
+				left = $(siblings[index-1]).text();
+				left = left.substring(left.length - 100, left.length);
+				var m = left.match('[^.]{0,100}$');
+				if (m) {
+					left = m[0];
+				}
+			}
+			var middle = highlited[i].innerHTML;
+			var right = '';
+			if (index < siblings.length-1) {
+				right = $(siblings[index+1]).text();
+				right = right.substring(0, 100);
+				var m = right.match('^[^.]{0,100}\.{0,1}');
+				if (m) {
+					right = m[0];
+				}
+			}
+			var text = left + '<b>' + middle + '</b>' + right;
+			matches[matches.length] = {thisMatch: highlited[i].innerHTML, context: text, element: highlited[i]};
+		}
 		if (matches.length > 100) {
 			matches = matches.slice(0, 100);
+			break;
 		}
 	}
 	/* The following block sorts the matches array based on thisMatch attribute and 
