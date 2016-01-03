@@ -30,7 +30,7 @@ portB2.onMessage.addListener(function(msg) {
 	}
 
 	var portP2 = chrome.runtime.connect({name: "sendBackMatches"});
-	if (lastSearchText.length > 0) {
+	if (lastSearchText.length > 0 && !(lastSearchText.match('^"*$'))) {
 		matches = getMatches(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
 		portP2.postMessage({matches: matches});
 	} else {
