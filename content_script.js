@@ -61,19 +61,20 @@ function parseDom() {
 	sanitizedUniqueVisibleWords = Array.from(uniqueWords);
 
 	portB2.postMessage({words: sanitizedUniqueVisibleWords}); // order the vectors via the vectorsLookup port
-	portB1.postMessage({}); // ask to get stop words (from background page which loaded them from a json)
 }
 
 parseDom(); // we can start parsing the DOM without loading any functions below
+portB1.postMessage({}); // ask to get stop words (from background page which loaded them from a json)
 
 var dl = DamerauLevenshtein({}, true); // instantiate the edit-distance object
+var mergeSortCache = {};
 
 chrome.runtime.onConnect.addListener(function(portP) {
 	if (portP.name == "fromSendAndReceive") {
 		portP.onMessage.addListener(function(msg) {
 			var searchText = msg.searchText;
 			/* Performance condition: only keep the first 50 characters of a query */
-			lastSearchText = searchText.substring(0, 50).toLowerCase(); // update the last searched text 
+			lastSearchText = searchText.substring(0, 50).toLowerCase().trim(); // update the last searched text 
 
 			clearHighlighting();
 			var searchTextWords;
@@ -120,8 +121,29 @@ function scrollToHighlite(matchesSelectedCount) {
 }
 
 function expandSearchText(searchText, knn) {
-	var searchTextWords = searchText.split(' ');
 	var searchTexts = [searchText]; // original search text must be returned no matter what
+	var searchTextWords = searchText.split(' ');
+	var searchTextWordsWithExacts = [];
+
+	var numQuotes = (searchText.match(/"/g) || []).length;
+	if (numQuotes % 2 == 0) {
+		var left = -1;
+		for (var i = 0; i < searchTextWords.length; i++) {
+			if (!(searchTextWords[i].slice(0, 1) != '"' ^ searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) != '"')) {
+				searchTextWordsWithExacts[searchTextWordsWithExacts.length] = searchTextWords[i];
+			} else {
+				if (searchTextWords[i].slice(0, 1) == '"' && searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) != '"') {
+					var left = i;
+				} else if (searchTextWords[i].slice(0, 1) != '"' && searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) == '"') {
+					searchTextWordsWithExacts[searchTextWordsWithExacts.length] = searchTextWords.slice(left, i+1).join(' ');
+				}
+			}
+		}
+		searchTextWords = searchTextWordsWithExacts;
+	} else {
+		searchText = sanitize2(searchText);
+		searchTextWords = searchText.split(' ');
+	}
 
 	var substitutions = {};
 	for (var i = 0; i < searchTextWords.length; i++) {
@@ -284,6 +306,7 @@ function getMatches(searchText, knn) {
 	}
 	/* The following block sorts the matches array based on thisMatch attribute and 
 	how close it is to the original searchText based on the edit-distance score. */ 
+	mergeSortCache = {};
 	matches = mergeSort(matches, searchText); // we use our own stable sort (we need stable so that results appear in the correct order on the page)
 	highlited = [];
 	for (var i = 0; i < matches.length; i++) {
@@ -370,7 +393,6 @@ function mergeSort(arr, searchText) {
 	}
 }
 
-var mergeSortCache = {};
 function compare(elem1, elem2, searchText) {
 	var a;
 	if (elem1.thisMatch in mergeSortCache) {
@@ -386,7 +408,7 @@ function compare(elem1, elem2, searchText) {
 		b = dl(elem2.thisMatch, searchText.toLowerCase());
 		mergeSortCache[elem2.thisMatch] = b;
 	}
-	return a -b;
+	return a-b;
 }
 
 function merge(left, right, searchText) {

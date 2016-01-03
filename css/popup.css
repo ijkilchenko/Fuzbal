@@ -12,8 +12,11 @@ body {
 	cursor:pointer;
 }
 
-#loading {
-	float:right;
+#loadingIcon {
+	position:absolute;
+	margin-top: 7px;
+	margin-left: 7px;
+	display: none;
 }
 
 .header {
@@ -32,7 +35,7 @@ body {
 }
 
 #searchText {
-	padding-left: 10px;
+	padding-left: 25px;
 	width:100%;
 	height:30px;
 	box-shadow: 0 0 0.5em 0.5em #ffffff;

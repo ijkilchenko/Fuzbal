@@ -19,6 +19,7 @@ function handleMsg(msg) {
 	lastMsgWithMatches = msg;
 	matchesSelectedCount = 0;
 	render(msg, matchesSelectedCount);
+	$(document.getElementById("loadingIcon")).hide();
 }
 
 function sendAndReceive() {
@@ -31,6 +32,7 @@ function sendAndReceive() {
 	} else {
 		$(document.getElementById("matchesList")).show();
 		$(document.getElementById("helpTips")).hide();
+		$(document.getElementById("loadingIcon")).show();
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var port = chrome.tabs.connect(tabs[0].id, {name: "fromSendAndReceive"});
 			port.postMessage({searchText: searchText});
