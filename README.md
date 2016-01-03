@@ -33,7 +33,7 @@ Search for the `the king` in the [full text of "Alice in Wonderland."](https://a
 
 Really stress-test the extension by looking for the phrase `airplane flew` in the [full text of "1984."](http://msxnet.org/orwell/1984)
 
-For the sake of performance, we limit the number of search results if there are many, many matches. Nobody cares to find all letters `e` any page (but you still can find the first hundred!). 
+For the sake of performance, we limit the number of search results if there are many, many matches. Nobody cares to find all letters `e` on any page (but you still can find the first hundred!). 
 
 ## Regular Expression and Exact Matches Support
 Whenever the user does need an exact match, just use double quotes around a word or words. For example, you can search for `"airplane" flew` instead of `airplane flew`. This should be intuitive because that's how you would make your results exact in Google search. 
@@ -43,7 +43,7 @@ You can search using regular expressions by surrounding your search text with `/
 ## Contact And Development
 This is a hobby project of someone who dabbles in machine learning and primarily uses Python. **Note:** the author never used JavaScript before this project and so the code might look a little funky. Okay, a lot funky. There is an emphasis on "beta." Right now, we have some performance conditions, but we can expect some other edge cases not to be covered in terms of performance. 
 
-Feel free to fork the project and make pull requests. JavaScript specific help is very welcomed (if there is anything that can be done simpler and faster, for example). Any changes made to the `master` branch will be published on the Chrome Web Store (manually by the author). All contributions will be clearly visible. 
+Feel free to fork the project and make pull requests. JavaScript specific help is very welcomed (if there is anything that can be done simpler and faster, for example). Any changes made to the `master` branch will be published to the Chrome Web Store (manually by the author). All contributions will be clearly visible. 
 
 Reach out directly to me via email `ijkilchenko` AT `gmail.com`.
 
