@@ -1,7 +1,7 @@
-# Fuzbal v.0.98 (beta)
+# Fuzbal v.0.99 (beta)
 
 ## Download The Extension
-[Link to the Chrome Web Store.](https://chrome.google.com/webstore/detail/fuzbal/lidjpicdkcgjdkgifmmpalkibjeppdof) Once installed, go to any web-page, open the extension (try hitting **Ctrl+Shift+K** if that shortcut is not already used by your Chrome), and use as you would use Ctrl+F. 
+[Link to the Chrome Web Store.](https://chrome.google.com/webstore/detail/fuzbal/lidjpicdkcgjdkgifmmpalkibjeppdof) Once installed, go to any web-page, open the extension (try hitting **Ctrl+Shift+K** if that shortcut is not already used by your Chrome or [map your own](http://lifehacker.com/add-custom-keyboard-shortcuts-to-chrome-extensions-for-1595322121)), and use as you would use Ctrl+F. 
 
 ## Summary
 Fuzbal (beta) is a Chome extension that gives Ctrl+F like find results which include non-exact (fuzzy) matches. The fuzziness comes from trying to add potentially misspellet words and words that are often seen together in context (synonyms). 
