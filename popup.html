@@ -26,7 +26,7 @@
 
   <div id="middle">
 
-    <div id="matchesList" style="display:none">
+    <div id="resultsList" style="display:none">
     </div>
 
     <div id="helpTips" style="display:none">
@@ -51,16 +51,16 @@
 
     <div id="template" style="display:none">
       {{#msg}}
-      <p>{{numMatches}} matches</p>
-      {{#matchesBeforeSelected}}
-      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
-      {{/matchesBeforeSelected}}
-      {{#matchesSelected}}
-      <span id="{{id}}" class="matchItem"><li><b><span style="background-color:#00FF00">{{thisMatch}}</span>: </b>{{{context}}}</li></span>
-      {{/matchesSelected}}
-      {{#matchesAfterSelected}}
-      <span id="{{id}}" class="matchItem"><li><b>{{thisMatch}}: </b>{{{context}}}</li></span>
-      {{/matchesAfterSelected}}
+      <p>{{numResults}} matches</p>
+      {{#resultsBeforeSelected}}
+      <span id="{{id}}" class="resultItem"><li><b>{{thisResult}}: </b>{{{context}}}</li></span>
+      {{/resultsBeforeSelected}}
+      {{#resultsSelected}}
+      <span id="{{id}}" class="resultItem"><li><b><span style="background-color:#00FF00">{{thisResult}}</span>: </b>{{{context}}}</li></span>
+      {{/resultsSelected}}
+      {{#resultsAfterSelected}}
+      <span id="{{id}}" class="resultItem"><li><b>{{thisResult}}: </b>{{{context}}}</li></span>
+      {{/resultsAfterSelected}}
       {{/msg}}
     </div>
 

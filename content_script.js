@@ -1,16 +1,16 @@
 /* author: ijkilchenko@gmail.com
 MIT license */
 
-var sanitizedVisibleText; // holds all the visible text on current tab as a string (after sanitization)
-var sanitizedUniqueVisibleWords; // array of the vocabulary of sanitized words on current tab
-var localWords2Vects = {}; // subset of the whole word2vec dictionary of words that appear on current tab
+var visibleText; // holds all the visible text on current tab as a string (after sanitization)
+var uniqueVisibleWords; // array of the vocabulary of words on current tab
+var localWords2Vects = {}; // subset of the whole word vectors dictionary of words that appear on current tab
 var stopWords; // English stopwords
 
 var highlited = []; // span elements which are currently highlighted
 var lastSearchText = ''; // used to populate the popup after being closed
 var doNotEscape = true; // are we searching using a regular expression?
 
-var previousMatchesSelectedCount = 0;
+var lastResultSelectedIndex = 0;
 
 function sanitize1(str) {
 	// remove any "bad" character and lower case everything remaining and trim
@@ -29,12 +29,12 @@ portB2.onMessage.addListener(function(msg) {
 		localWords2Vects[word] = msg.localWords2Vects[word];
 	}
 
-	var portP2 = chrome.runtime.connect({name: "sendBackMatches"});
+	var portP2 = chrome.runtime.connect({name: "sendBackResults"});
 	if (lastSearchText.length > 0 && !(lastSearchText.match('^"*$'))) {
-		matches = getMatches(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
-		portP2.postMessage({matches: matches});
+		results = getResults(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
+		portP2.postMessage({results: results});
 	} else {
-		portP2.postMessage({matches: []}); // send empty list back if nothing is in the searchText input box
+		portP2.postMessage({results: []}); // send empty list back if nothing is in the searchText input box
 	}
 });
 
@@ -46,21 +46,21 @@ portB1.onMessage.addListener(function(msg) {
 function parseDom() {
 	/* This function is run independently of whether or not the fuzbal popup is opened on a tab (every tab is thus parsed 
 	right away in order to preprocess the text on the tab). We want to get the whole visible text of the tab, 
-	sanitizedVisibleText, joined across every visible element on the page. We also want to find the vocabulary of the tab, 
-	the unique words on the page, sanitizedUniqueVisibleWords, and use those to order a local word2vec dictionary. */
+	visibleText, joined across every visible element on the page. We also want to find the vocabulary of the tab, 
+	the unique words on the page, uniqueVisibleWords, and use those to order a local word2vec dictionary. */
 
-	sanitizedVisibleText = $(document.body).children(":visible").text();
+	visibleText = $(document.body).children(":visible").text();
 
-	var visibleWords = sanitizedVisibleText.split(' ');
+	var visibleWords = visibleText.split(' ');
 
 	var uniqueWords = new Set();
 	visibleWords.forEach(function(word) {
 		uniqueWords.add(sanitize2(word)); 
 	});
 
-	sanitizedUniqueVisibleWords = Array.from(uniqueWords);
+	uniqueVisibleWords = Array.from(uniqueWords);
 
-	portB2.postMessage({words: sanitizedUniqueVisibleWords}); // order the vectors via the vectorsLookup port
+	portB2.postMessage({words: uniqueVisibleWords}); // order the vectors via the vectorsLookup port
 }
 
 parseDom(); // we can start parsing the DOM without loading any functions below
@@ -99,7 +99,7 @@ chrome.runtime.onConnect.addListener(function(portP) {
 		});
 	} else if (portP.name == "scrollToMatch") {
 		portP.onMessage.addListener(function(msg) {
-			scrollToHighlite(msg.matchesSelectedCount);
+			scrollToHighlite(msg.resultSelectedIndex);
 		});
 	}
 });
@@ -108,14 +108,14 @@ function clearHighlighting() {
 	unhighlite();
 }
 
-function scrollToHighlite(matchesSelectedCount) {
-	if (highlited.length > 0 && previousMatchesSelectedCount < highlited.length) {
-		highlited[previousMatchesSelectedCount].style.backgroundColor  = '#ffef14';
-		var currentHighlited = highlited[matchesSelectedCount];
-		currentHighlited.style.backgroundColor = '#00FF00';
-		previousMatchesSelectedCount = matchesSelectedCount;
+function scrollToHighlite(resultSelectedIndex) {
+	if (highlited.length > 0) {
+		highlited[lastResultSelectedIndex].style.backgroundColor  = '#ffef14';
+		var activeHighlited = highlited[resultSelectedIndex];
+		activeHighlited.style.backgroundColor = '#00FF00';
+		lastResultSelectedIndex = resultSelectedIndex;
 
-		currentHighlited.scrollIntoView();
+		activeHighlited.scrollIntoView();
 		document.body.scrollTop -= (window.innerHeight / 2 );
 	}
 }
@@ -156,12 +156,12 @@ function expandSearchText(searchText, knn) {
 		} else {
 			if (searchTextWords[i].length > 3 &&  // we only care if the word is at least 4 letters long (before we assume spelling mistakes are made)
 				stopWords.words.indexOf(searchTextWords[i]) == -1) {
-				for (var j = 0; j < sanitizedUniqueVisibleWords.length; j++) {
-					if (sanitizedUniqueVisibleWords[j].length > 3 &&
-						stopWords.words.indexOf(sanitizedUniqueVisibleWords[j]) == -1) {
-						distance = dl(searchTextWords[i], sanitizedUniqueVisibleWords[j]);
+				for (var j = 0; j < uniqueVisibleWords.length; j++) {
+					if (uniqueVisibleWords[j].length > 3 &&
+						stopWords.words.indexOf(uniqueVisibleWords[j]) == -1) {
+						distance = dl(searchTextWords[i], uniqueVisibleWords[j]);
 						if (distance < 2) { // if there is only 1 atomic operation (insert, deletion, substitution, transposition) difference
-							substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat([sanitizedUniqueVisibleWords[j]]);
+							substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat([uniqueVisibleWords[j]]);
 						}
 					}
 					/* Performance condition. Any word shall only have at most 10 substitutions. */
@@ -192,17 +192,17 @@ function expandSearchText(searchText, knn) {
 
 					var vector = localWords2Vects[sub];
 					var words = []; // where we keep all the similar words
-					for (var j = 0; j < sanitizedUniqueVisibleWords.length; j++) { // for every unique word on the page
+					for (var j = 0; j < uniqueVisibleWords.length; j++) { // for every unique word on the page
 						/* The word expansions must also be:
 						(1) similar word must be larger than 2 characters
 						(2) not stop words themselves and
 						(3) we must know the vector for them */
-						if (sanitizedUniqueVisibleWords[j].length > 3 &&
-							stopWords.words.indexOf(sanitizedUniqueVisibleWords[j]) == -1 && 
-							sanitizedUniqueVisibleWords[j] in localWords2Vects) {
+						if (uniqueVisibleWords[j].length > 3 &&
+							stopWords.words.indexOf(uniqueVisibleWords[j]) == -1 && 
+							uniqueVisibleWords[j] in localWords2Vects) {
 							// each element in words contains the similar word and the distance (score) between the vectors between the pair of words
-							words[words.length] = {'word' : sanitizedUniqueVisibleWords[j], // the similar word
-							'score' : getDistance(localWords2Vects[sanitizedUniqueVisibleWords[j]], vector)}; 
+							words[words.length] = {'word' : uniqueVisibleWords[j], // the similar word
+							'score' : getDistance(localWords2Vects[uniqueVisibleWords[j]], vector)}; 
 						}
 					}
 					words = words.sort(function(elem1, elem2) {
@@ -233,15 +233,15 @@ function expandSearchText(searchText, knn) {
 
 	var regex = new RegExp('(' + substitutionsInOrder.join(') (') + ')', 'gi');
 	do {
-		/* We search through our visible text string (which we have from our preprocessing stage of parseDom) for matches 
-		to our new regular expression. If any matches exist, we grab what they are. Later we will try to highlight these 
+		/* We search through our visible text string (which we have from our preprocessing stage of parseDom) for results 
+		to our new regular expression. If any results exist, we grab what they are. Later we will try to highlight these 
 		specific on the actual tab. */
-		m = regex.exec(sanitizedVisibleText);
+		m = regex.exec(visibleText);
 		if (m) {
-			searchTexts[searchTexts.length] = m[0]; // grab the substring that matches our regular expression
+			searchTexts[searchTexts.length] = m[0]; // grab the substring that results our regular expression
 		}
 	} while (m);
-	searchTexts = searchTexts.filter(function(elem, i, array){ return array.indexOf(elem) === i }); // keep only unique matches
+	searchTexts = searchTexts.filter(function(elem, i, array){ return array.indexOf(elem) === i }); // keep only unique results
 	searchTexts = searchTexts.filter(function(el) { return el.length != 0 }); // make sure we don't somehow end up with an empty string anywhere
 
 	return searchTexts;
@@ -252,7 +252,7 @@ function escapeRegExp(str) {
 }
 
 var hashes = {};
-function getMatches(searchText, knn) {
+function getResults(searchText, knn) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
 	Each value in the returned array will be highlited and the results will be sent back to the popup. */
@@ -265,7 +265,7 @@ function getMatches(searchText, knn) {
 
 	highlited = document.getElementsByClassName('fzbl_highlite');
 
-	var matches = []; // will hold the match objects to be sent back to the popup
+	var results = []; // will hold the match objects to be sent back to the popup
 	for (var i = 0; i < highlited.length; i++) {
 		var siblings = [];
 		var index;
@@ -297,23 +297,23 @@ function getMatches(searchText, knn) {
 				}
 			}
 			var text = left + '<b>' + middle + '</b>' + right;
-			matches[matches.length] = {id: i, thisMatch: highlited[i].innerHTML, context: text, element: highlited[i]};
+			results[results.length] = {id: i, thisResult: highlited[i].innerHTML, context: text, element: highlited[i]};
 		}
-		if (matches.length > 100) {
-			matches = matches.slice(0, 100);
+		if (results.length > 100) {
+			results = results.slice(0, 100);
 			break;
 		}
 	}
-	/* The following block sorts the matches array based on thisMatch attribute and 
+	/* The following block sorts the results array based on thisResult attribute and 
 	how close it is to the original searchText based on the edit-distance score. */ 
 	mergeSortCache = {};
-	matches = mergeSort(matches, searchText); // we use our own stable sort (we need stable so that results appear in the correct order on the page)
+	results = mergeSort(results, searchText); // we use our own stable sort (we need stable so that results appear in the correct order on the page)
 	highlited = [];
-	for (var i = 0; i < matches.length; i++) {
-		highlited[highlited.length] = matches[i].element;
-		matches[i].id = i;
+	for (var i = 0; i < results.length; i++) {
+		highlited[highlited.length] = results[i].element;
+		results[i].id = i;
 	}
-	return matches;
+	return results;
 }
 
 var numHighlited;
@@ -343,7 +343,7 @@ function _highlite(node, regex) {
 			A node with text before the match, a node with the match text, and a node with text after the match. */
 			var highlited = document.createElement('span'); // we will wrap our match inside a new span element
 			highlited.className = 'fzbl_highlite'; // we give it this className
-			highlited.style.backgroundColor = '#ffef14'; // and this becomes the background color for (non-active matches)
+			highlited.style.backgroundColor = '#ffef14'; // and this becomes the background color for (non-active results)
 			var matchElement = node.splitText(match.index); // this becomes the node with the match text
 			matchElement.splitText(match[0].length);
 			var wordClone = matchElement.cloneNode(false); 
@@ -395,18 +395,18 @@ function mergeSort(arr, searchText) {
 
 function compare(elem1, elem2, searchText) {
 	var a;
-	if (elem1.thisMatch in mergeSortCache) {
-		a = mergeSortCache[elem1.thisMatch];
+	if (elem1.thisResult in mergeSortCache) {
+		a = mergeSortCache[elem1.thisResult];
 	} else {
-		a = dl(elem1.thisMatch, searchText.toLowerCase());
-		mergeSortCache[elem1.thisMatch] = a;
+		a = dl(elem1.thisResult, searchText.toLowerCase());
+		mergeSortCache[elem1.thisResult] = a;
 	}
 	var b;
-	if (elem2.thisMatch in mergeSortCache) {
-		b = mergeSortCache[elem2.thisMatch];
+	if (elem2.thisResult in mergeSortCache) {
+		b = mergeSortCache[elem2.thisResult];
 	} else {
-		b = dl(elem2.thisMatch, searchText.toLowerCase());
-		mergeSortCache[elem2.thisMatch] = b;
+		b = dl(elem2.thisResult, searchText.toLowerCase());
+		mergeSortCache[elem2.thisResult] = b;
 	}
 	return a-b;
 }
