@@ -124,7 +124,7 @@ document.addEventListener("keyup", function(e) {
 document.getElementById("help").addEventListener("click", function(e) {
 	document.getElementById("searchText").value = "fuzbal help";
 	sendAndReceive();
-})
+});
 
 var tips = ['<b>Tip:</b> Try <b>Ctrl+Shift+K</b> (<b>Command</b> on a Mac) to open/close the extension or <a href="http://lifehacker.com/add-custom-keyboard-shortcuts-to-chrome-extensions-for-1595322121">set a custom shortcut</a> if this combination is already taken. ',
 '<b>Info:</b> Synonyms and related words are found locally in a dictionary file. ',
