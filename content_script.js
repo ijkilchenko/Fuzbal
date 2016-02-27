@@ -10,6 +10,8 @@ var highlited = []; // span elements which are currently highlighted
 var lastSearchText = ''; // used to populate the popup after being closed
 var doNotEscape = true; // are we searching using a regular expression?
 
+var properly_quoted_regex = /^(?:(?:\s{0,1}\"([^\s](?:(?!(?:\s\")).)*)\"(?=(?:\s|$)))|(?:(?!(?:.\"))[^\"]))*$/;
+
 var lastResultSelectedIndex = 0;
 
 function sanitize1(str) {
@@ -30,7 +32,10 @@ portB2.onMessage.addListener(function(msg) {
 	}
 
 	var portP2 = chrome.runtime.connect({name: "sendBackResults"});
-	if (lastSearchText.length > 0) {
+	console.log(lastSearchText);
+	var m = lastSearchText.match(properly_quoted_regex);
+	console.log(m);
+	if (lastSearchText.length > 0 && properly_quoted_regex.exec(lastSearchText)) {
 		if (doNotEscape == false || (doNotEscape == true && !''.match(lastSearchText))) {
 			results = getResults(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
 			portP2.postMessage({results: results});
