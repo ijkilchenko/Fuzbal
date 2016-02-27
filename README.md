@@ -1,4 +1,4 @@
-# Fuzbal v.0.99 (beta)
+# Fuzbal v.0.993
 
 ## Download The Extension
 [Link to the Chrome Web Store.](https://chrome.google.com/webstore/detail/fuzbal/lidjpicdkcgjdkgifmmpalkibjeppdof) Once installed, go to any web-page, open the extension (try hitting **Ctrl+Shift+K** if that shortcut is not already used by your Chrome or [map your own](http://lifehacker.com/add-custom-keyboard-shortcuts-to-chrome-extensions-for-1595322121)), and use as you would use Ctrl+F. 
