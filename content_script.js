@@ -30,9 +30,13 @@ portB2.onMessage.addListener(function(msg) {
 	}
 
 	var portP2 = chrome.runtime.connect({name: "sendBackResults"});
-	if (lastSearchText.length > 0 && !(lastSearchText.match('^"*$'))) {
-		results = getResults(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
-		portP2.postMessage({results: results});
+	if (lastSearchText.length > 0) {
+		if (doNotEscape == false || (doNotEscape == true && !''.match(lastSearchText))) {
+			results = getResults(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
+			portP2.postMessage({results: results});
+		} else {
+			portP2.postMessage({results: []}); // send empty list back if nothing is in the searchText input box
+		}
 	} else {
 		portP2.postMessage({results: []}); // send empty list back if nothing is in the searchText input box
 	}
@@ -69,6 +73,14 @@ portB1.postMessage({}); // ask to get stop words (from background page which loa
 var dl = DamerauLevenshtein({}, true); // instantiate the edit-distance object
 var mergeSortCache = {};
 
+function isRegEx(searchText) {
+	if (searchText.slice(0, 1) == '/' && searchText.slice(searchText.length-1, searchText.length) == '/' && searchText.length > 2) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 chrome.runtime.onConnect.addListener(function(portP) {
 	if (portP.name == "fromSendAndReceive") {
 		portP.onMessage.addListener(function(msg) {
@@ -79,7 +91,7 @@ chrome.runtime.onConnect.addListener(function(portP) {
 			clearHighlighting();
 			var searchTextWords;
 			// Check if we passed a regular expression (lastSearchText must start and end with a forward-slash)
-			if (lastSearchText.slice(0, 1) == '/' && lastSearchText.slice(lastSearchText.length-1, lastSearchText.length) == '/' && lastSearchText.length > 2) {
+			if (isRegEx(searchText)) {
 				searchTextWords = [];
 				doNotEscape = true;
 			} else {
