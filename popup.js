@@ -49,7 +49,7 @@ function render(msg, resultSelectedIndex) {
 		if (numResults > 99) { // Whenever we get more than 100 results, we do not display the actual number
 			numResults = 'Many';
 		}
-		var rendered = Mustache.render(template, {msg: {numResults : numResults, 
+		var rendered = Mustache.render(template, {msg: {numResults : numResults,
 			resultsBeforeSelected: resultsBeforeSelected, resultsSelected: resultsSelected, resultsAfterSelected: resultsAfterSelected}});
 		document.getElementById("resultsList").innerHTML = rendered;
 	} else {
@@ -79,7 +79,7 @@ function sendAndReceive() {
 	}
 }
 
-if (document.addEventListener ){
+if (document.addEventListener){
 	/* If anything in the popup is clicked and the element we clicked on is a matchItem... */
 	document.addEventListener("click", function(event){
 		var targetElement = event.target || event.srcElement;
@@ -93,12 +93,12 @@ if (document.addEventListener ){
 			}
 		} while (targetElement.parentNode); // Traverse the element path up to the root and try to see if a matchItem element is an ancestor
 	});
-} 
+}
 
 document.getElementById("searchText").addEventListener("keyup", function(e) {
 	if ([13, 37, 38, 39, 40].indexOf(e.keyCode) == -1) {
 		sendAndReceive(); // Send a message to the content_script (to ask for results) if none of these special keys are pressed
-	} 
+	}
 });
 
 document.addEventListener("keyup", function(e) {
@@ -127,12 +127,12 @@ document.getElementById("help").addEventListener("click", function(e) {
 
 var tips = ['<b>Tip:</b> Try <b>Ctrl+Shift+K</b> (<b>Command</b> on a Mac) to open/close the extension or <a href="http://lifehacker.com/add-custom-keyboard-shortcuts-to-chrome-extensions-for-1595322121">set a custom shortcut</a> if this combination is already taken. ',
 '<b>Info:</b> Synonyms and related words are found locally in a dictionary file. ',
-'<b>Tip:</b> Clicking on a find result will scroll your window to where the result appears on the page. ', 
-'<b>Tip:</b> Press ENTER to go down the match list. ', 
-'<b>Tip:</b> Use UP/DOWN keys to cycle up and down the match list. ', 
-'<b>Tip:</b> Click the <b>?</b> (in the top left corner) to learn more about the extension. ', 
-'<b>Tip:</b> Use double quotes for exact results. ', 
-'<b>Tip:</b> To search using regular expressions, start and end with "/" (e.g. <b>/foob[ae]r/</b>). ', 
+'<b>Tip:</b> Clicking on a find result will scroll your window to where the result appears on the page. ',
+'<b>Tip:</b> Press ENTER to go down the match list. ',
+'<b>Tip:</b> Use UP/DOWN keys to cycle up and down the match list. ',
+'<b>Tip:</b> Click the <b>?</b> (in the top left corner) to learn more about the extension. ',
+'<b>Tip:</b> Use double quotes for exact results (e.g. <b>"exact terms here" and not exact terms here</b>). ',
+'<b>Tip:</b> To search using regular expressions, start and end with "/" (e.g. <b>/foob[ae]r/</b>). ',
 '<b>Info:</b> The current find result is highlighted in green and others are highlighted in yellow. '];
 
 /* Run this block when the popup is opened */

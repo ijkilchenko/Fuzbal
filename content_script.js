@@ -51,9 +51,9 @@ portB1.onMessage.addListener(function(msg) {
 });
 
 function parseDom() {
-	/* This function is run independently of whether or not the fuzbal popup is opened on a tab (every tab is thus parsed 
-	right away in order to preprocess the text on the tab). We want to get the whole visible text of the tab, 
-	visibleText, joined across every visible element on the page. We also want to find the vocabulary of the tab, 
+	/* This function is run independently of whether or not the fuzbal popup is opened on a tab (every tab is thus parsed
+	right away in order to preprocess the text on the tab). We want to get the whole visible text of the tab,
+	visibleText, joined across every visible element on the page. We also want to find the vocabulary of the tab,
 	the unique words on the page, uniqueVisibleWords, and use those to order a local word2vec dictionary. */
 
 	visibleText = $(document.body).children(":visible").text();
@@ -62,7 +62,7 @@ function parseDom() {
 
 	var uniqueWords = new Set();
 	visibleWords.forEach(function(word) {
-		uniqueWords.add(sanitize2(word)); 
+		uniqueWords.add(sanitize2(word));
 	});
 
 	uniqueVisibleWords = Array.from(uniqueWords);
@@ -73,7 +73,7 @@ function parseDom() {
 parseDom(); // we can start parsing the DOM without loading any functions below
 portB1.postMessage({}); // ask to get stop words (from background page which loaded them from a json)
 
-var dl = DamerauLevenshtein({}, true); // instantiate the edit-distance object
+var levenshtein = DamerauLevenshtein({}, true); // instantiate the edit-distance object
 var mergeSortCache = {};
 
 function isRegEx(searchText) {
@@ -89,7 +89,7 @@ chrome.runtime.onConnect.addListener(function(portP) {
 		portP.onMessage.addListener(function(msg) {
 			var searchText = msg.searchText;
 			/* Performance condition: only keep the first 50 characters of a query */
-			lastSearchText = searchText.substring(0, 50).toLowerCase().trim(); // update the last searched text 
+			lastSearchText = searchText.substring(0, 50).toLowerCase().trim(); // update the last searched text
 
 			clearHighlighting();
 			var searchTextWords;
@@ -174,7 +174,7 @@ function expandSearchText(searchText, knn) {
 				for (var j = 0; j < uniqueVisibleWords.length; j++) {
 					if (uniqueVisibleWords[j].length > 3 &&
 						stopWords.words.indexOf(uniqueVisibleWords[j]) == -1) {
-						distance = dl(searchTextWords[i], uniqueVisibleWords[j]);
+						distance = levenshtein(searchTextWords[i], uniqueVisibleWords[j]);
 						if (distance < 2) { // if there is only 1 atomic operation (insert, deletion, substitution, transposition) difference
 							substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat([uniqueVisibleWords[j]]);
 						}
@@ -213,11 +213,11 @@ function expandSearchText(searchText, knn) {
 						(2) not stop words themselves and
 						(3) we must know the vector for them */
 						if (uniqueVisibleWords[j].length > 3 &&
-							stopWords.words.indexOf(uniqueVisibleWords[j]) == -1 && 
+							stopWords.words.indexOf(uniqueVisibleWords[j]) == -1 &&
 							uniqueVisibleWords[j] in localWords2Vects) {
 							// each element in words contains the similar word and the distance (score) between the vectors between the pair of words
 							words[words.length] = {'word' : uniqueVisibleWords[j], // the similar word
-							'score' : getDistance(localWords2Vects[uniqueVisibleWords[j]], vector)}; 
+							'score' : getDistance(localWords2Vects[uniqueVisibleWords[j]], vector)};
 						}
 					}
 					words = words.sort(function(elem1, elem2) {
@@ -248,8 +248,8 @@ function expandSearchText(searchText, knn) {
 
 	var regex = new RegExp('(' + substitutionsInOrder.join(') (') + ')', 'gi');
 	do {
-		/* We search through our visible text string (which we have from our preprocessing stage of parseDom) for results 
-		to our new regular expression. If any results exist, we grab what they are. Later we will try to highlight these 
+		/* We search through our visible text string (which we have from our preprocessing stage of parseDom) for results
+		to our new regular expression. If any results exist, we grab what they are. Later we will try to highlight these
 		specific on the actual tab. */
 		m = regex.exec(visibleText);
 		if (m) {
@@ -266,7 +266,7 @@ function escapeRegExp(str) {
 	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 }
 
-var hashes = {};
+var fuzbal_hashes = {};
 function getResults(searchText, knn) {
 	/* First we call another function to potentially expand the searchText. In other words, an original searchText of
 	'foo bar' might become ['foo bar', 'fum bar'] if this expansion determined that 'foo' is somehow similar to 'fum'.
@@ -284,11 +284,11 @@ function getResults(searchText, knn) {
 	for (var i = 0; i < highlited.length; i++) {
 		var siblings = [];
 		var index;
-		if (highlited[i].parentNode in hashes) {
-			siblings = hashes[highlited[i].parentNode];
+		if (highlited[i].parentNode in fuzbal_hashes) {
+			siblings = fuzbal_hashes[highlited[i].parentNode];
 		} else {
 			siblings = Array.from(highlited[i].parentNode.childNodes);
-			hashes[highlited[i]] = siblings;
+			fuzbal_hashes[highlited[i]] = siblings;
 		}
 		index = siblings.indexOf(highlited[i]);
 		if (index > -1) {
@@ -319,8 +319,8 @@ function getResults(searchText, knn) {
 			break;
 		}
 	}
-	/* The following block sorts the results array based on thisResult attribute and 
-	how close it is to the original searchText based on the edit-distance score. */ 
+	/* The following block sorts the results array based on thisResult attribute and
+	how close it is to the original searchText based on the edit-distance score. */
 	mergeSortCache = {};
 	results = mergeSort(results, searchText); // we use our own stable sort (we need stable so that results appear in the correct order on the page)
 	highlited = [];
@@ -354,19 +354,19 @@ function _highlite(node, regex) {
 	if (node.nodeType == 3) {
 		var match = node.data.match(regex);
 		if (match && numHighlited < 500) {
-			/* If there is a match, we will split the original node into three parts. 
+			/* If there is a match, we will split the original node into three parts.
 			A node with text before the match, a node with the match text, and a node with text after the match. */
 			var highlited = document.createElement('span'); // we will wrap our match inside a new span element
 			highlited.className = 'fzbl_highlite'; // we give it this className
 			highlited.style.backgroundColor = '#ffef14'; // and this becomes the background color for (non-active results)
 			var matchElement = node.splitText(match.index); // this becomes the node with the match text
 			matchElement.splitText(match[0].length);
-			var wordClone = matchElement.cloneNode(false); 
+			var wordClone = matchElement.cloneNode(false);
 			highlited.appendChild(wordClone); // add the match text
-			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement 
+			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement
 			numHighlited += 1;
 		}
-	} else if (node.nodeType == 1 && node.childNodes.length > 0 && node.tagName != 'SCRIPT' && node.tagName != 'STYLE' && node.tagName != 'IMG' && node.className != 'fzbl_highlite') { 
+	} else if (node.nodeType == 1 && node.childNodes.length > 0 && node.tagName != 'SCRIPT' && node.tagName != 'STYLE' && node.tagName != 'IMG' && node.className != 'fzbl_highlite') {
 		for (var i = 0; i < node.childNodes.length; i++) {
 			if (numHighlited < 500) {
 				_highlite(node.childNodes[i], regex);
@@ -413,14 +413,14 @@ function compare(elem1, elem2, searchText) {
 	if (elem1.thisResult in mergeSortCache) {
 		a = mergeSortCache[elem1.thisResult];
 	} else {
-		a = dl(elem1.thisResult, searchText.toLowerCase());
+		a = levenshtein(elem1.thisResult, searchText.toLowerCase());
 		mergeSortCache[elem1.thisResult] = a;
 	}
 	var b;
 	if (elem2.thisResult in mergeSortCache) {
 		b = mergeSortCache[elem2.thisResult];
 	} else {
-		b = dl(elem2.thisResult, searchText.toLowerCase());
+		b = levenshtein(elem2.thisResult, searchText.toLowerCase());
 		mergeSortCache[elem2.thisResult] = b;
 	}
 	return a-b;

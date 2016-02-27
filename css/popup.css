@@ -7,8 +7,8 @@ body {
 }
 
 #help {
-	margin:0 auto; 
-	position:absolute; 
+	margin:0 auto;
+	position:absolute;
 	cursor:pointer;
 }
 
@@ -20,7 +20,7 @@ body {
 }
 
 .header {
-	width:50%; 
+	width:50%;
 	margin:0 auto;
 	padding-bottom: 5px;
 }
