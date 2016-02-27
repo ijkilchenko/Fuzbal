@@ -33,7 +33,6 @@ function render(msg, resultSelectedIndex) {
 	var resultsBeforeSelected = [];
 	var resultsSelected = [];
 	var resultsAfterSelected = [];
-	console.log(msg.results[0]);
 	for (var i = 0; i < msg.results.length; i++) {
 		if (i < resultSelectedIndex) {
 			resultsBeforeSelected[resultsBeforeSelected.length] = msg.results[i];
@@ -85,7 +84,7 @@ if (document.addEventListener ){
 	document.addEventListener("click", function(event){
 		var targetElement = event.target || event.srcElement;
 		do {
-			if (targetElement.getAttribute('class') == 'matchItem') {
+			if (targetElement.getAttribute('class') == 'resultItem') {
 				resultSelectedIndex = targetElement.getAttribute('id'); // Get the index of the result we clicked on (will be made active)
 				render(lastMsg, resultSelectedIndex); // Refill the mustache template with a new active result (also scrolls to active result on tab)
 				break;

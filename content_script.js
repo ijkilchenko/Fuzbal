@@ -32,9 +32,7 @@ portB2.onMessage.addListener(function(msg) {
 	}
 
 	var portP2 = chrome.runtime.connect({name: "sendBackResults"});
-	console.log(lastSearchText);
 	var m = lastSearchText.match(properly_quoted_regex);
-	console.log(m);
 	if (lastSearchText.length > 0 && properly_quoted_regex.exec(lastSearchText)) {
 		if (doNotEscape == false || (doNotEscape == true && !''.match(lastSearchText))) {
 			results = getResults(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
