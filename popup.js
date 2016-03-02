@@ -127,7 +127,7 @@ document.addEventListener("keyup", function(e) {
 
 /* Do something special when the help icon is clicked */
 $("#help").on("click", function(e) {
-	$searchText.value = "fuzbal help";
+	$searchText.val("fuzbal help");
 	sendAndReceive();
 });
 
