@@ -1,8 +1,14 @@
 /* author: ijkilchenko@gmail.com
 MIT license */
 
-var template = document.getElementById('template').innerHTML; // Hidden mustache template div
+var template = $('#template').html(); // Hidden mustache template div
 Mustache.parse(template);
+
+// Save the jQuery objects to use later so jQuery doesn't have to re-query the dom
+var $resultsList = $("#resultsList");
+var $helpTips = $("#helpTips");
+var $searchText = $("#searchText");
+var $loadingIcon = $("#loadingIcon");
 
 var resultSelectedIndex = 0; // Index of the active result (in green)
 var lastMsg;
@@ -45,30 +51,30 @@ function render(msg, resultSelectedIndex) {
 
 	var numResults = msg.results.length;
 	if (numResults > 0) {
-		$(document.getElementById("resultsList")).show();
+		$resultsList.show();
 		if (numResults > 99) { // Whenever we get more than 100 results, we do not display the actual number
 			numResults = 'Many';
 		}
 		var rendered = Mustache.render(template, {msg: {numResults : numResults,
 			resultsBeforeSelected: resultsBeforeSelected, resultsSelected: resultsSelected, resultsAfterSelected: resultsAfterSelected}});
-		document.getElementById("resultsList").innerHTML = rendered;
+		$resultsList.html(rendered);
 	} else {
-		$(document.getElementById("resultsList")).hide();
+		$resultsList.hide();
 	}
-	$(document.getElementById("loadingIcon")).hide(); // Popup is updated with results so hide the loadingIcon
+	$loadingIcon.hide(); // Popup is updated with results so hide the loadingIcon
 }
 
 function sendAndReceive() {
-	var searchText = document.getElementById("searchText").value;
+	var searchText = $searchText.val();
 
 	if (searchText == "fuzbal help") { // If our searchText indicates we want to bring up the help menu
-		$(document.getElementById("resultsList")).hide(); // Hide the resultsList and show the helpTips instead
-		$(document.getElementById("helpTips")).show();
-		document.getElementById("searchText").select();
+		$resultsList.hide(); // Hide the resultsList and show the helpTips instead
+		$helpTips.show();
+		$searchText.select();
 	} else {
-		$(document.getElementById("helpTips")).hide(); // Make sure to hide the helpTips always when help menu is not indicated
-		$(document.getElementById("loadingIcon")).show();
-		$(document.getElementById("resultsList")).show();
+		$helpTips.hide(); // Make sure to hide the helpTips always when help menu is not indicated
+		$loadingIcon.show();
+		$resultsList.show();
 		chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 			var port = chrome.tabs.connect(tabs[0].id, {name: "fromSendAndReceive"});
 			port.postMessage({searchText: searchText});
@@ -95,7 +101,7 @@ if (document.addEventListener){
 	});
 }
 
-document.getElementById("searchText").addEventListener("keyup", function(e) {
+$searchText.on("keyup", function(e) {
 	if ([13, 37, 38, 39, 40].indexOf(e.keyCode) == -1) {
 		sendAndReceive(); // Send a message to the content_script (to ask for results) if none of these special keys are pressed
 	}
@@ -120,8 +126,8 @@ document.addEventListener("keyup", function(e) {
 });
 
 /* Do something special when the help icon is clicked */
-document.getElementById("help").addEventListener("click", function(e) {
-	document.getElementById("searchText").value = "fuzbal help";
+$("#help").on("click", function(e) {
+	$searchText.val("fuzbal help");
 	sendAndReceive();
 });
 
@@ -137,10 +143,10 @@ var tips = ['<b>Tip:</b> Try <b>Ctrl+Shift+K</b> (<b>Command</b> on a Mac) to op
 
 /* Run this block when the popup is opened */
 window.onload = function() {
-	document.getElementById("searchText").value = 'loading...';
+	$searchText.val('loading...');
 
 	var tip = tips[Math.floor(Math.random() * tips.length)] || tips[0]; // Gives tips[0] if Math.random() miraculously gives 1.0
-	document.getElementById("footer").innerHTML = '<center>' + tip + '</center>';
+	$("#footer").html('<center>' + tip + '</center>');
 
 	/* The lastSearchText is saved per tab so when opening the popup we can check if we already searched for something on this tab */
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -148,12 +154,12 @@ window.onload = function() {
 		port.postMessage({}); // The intention of this communication is always the same so we make the message empty
 		port.onMessage.addListener(function(msg) {
 			if (msg.lastSearchText.length > 0) {
-				document.getElementById("searchText").value = msg.lastSearchText;
-				document.getElementById("searchText").select(); // Highlight the text in the input box so it's easier to type something new
+				$searchText.val(msg.lastSearchText);
+				$searchText.select(); // Highlight the text in the input box so it's easier to type something new
 				sendAndReceive(); // Redo the search using the lastSearchText (we still need to need to rehighlight everything)
 			} else {
-				document.getElementById("searchText").value = '';
-				document.getElementById("searchText").focus();
+				$searchText.val('');
+				$searchText.focus();
 			}
 		});
 	});
