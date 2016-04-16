@@ -14,15 +14,6 @@ var properly_quoted_regex = /^(?:(?:\s{0,1}\"([^\s](?:(?!(?:\s\")).)*)\"(?=(?:\s
 
 var lastResultSelectedIndex = 0;
 
-function sanitize1(str) {
-	// remove any "bad" character and lower case everything remaining and trim
-	return str.replace(/[^a-zA-Z0-9" ]/g, "").toLowerCase().trim();
-}
-
-function sanitize2(str) {
-	return str.replace(/[^a-zA-Z0-9 ]/g, "").toLowerCase().trim();
-}
-
 var portB2 = chrome.runtime.connect({name: "vectorsLookup"});
 /* anytime we get a message back from background page under this port, we enrich our local word2vec dictionary
 we can continuously look up the vectors for the search terms and add those definitions to localWords2Vects */
