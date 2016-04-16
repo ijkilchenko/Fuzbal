@@ -30,4 +30,13 @@ describe('highlighting', function () {
         })
     });
 
+    describe('sanitize1 test', function () {
+
+        it('This should remove bad characters', function () {
+            var sample_text = 'foo bar';
+            var sample_text2 = 'foo bar ABC';
+            expect(sanitize1(sample_text)).to.equal(sample_text);
+            expect(sanitize1(sample_text2)).to.equal('foo bar abc');
+        })
+    });
 });

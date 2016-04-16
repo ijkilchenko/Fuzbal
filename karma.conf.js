@@ -17,6 +17,7 @@ module.exports = function(config) {
     files: [
       'domManipulation.js',
       'tests/**/*.spec.js',
+      'libraries/my_library.js',
 
       //include libs
       'libraries/jquery-2.1.4.min.js'
