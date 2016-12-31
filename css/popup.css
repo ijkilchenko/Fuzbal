@@ -1,5 +1,5 @@
 body {
-	background: url(../icons/symphony.png) repeat 0 0;
+	background-color: #eeeeee;
 	margin: 2px;
 	padding: 2px;
 	width: 384px;
@@ -7,7 +7,8 @@ body {
 }
 
 #help {
-	margin:0 auto;
+	margin-top: 7px;
+	margin-left: 7px; 
 	position:absolute;
 	cursor:pointer;
 }

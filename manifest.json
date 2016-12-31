@@ -1,14 +1,14 @@
 {
   "name": "Fuzbal",
-  "version": "0.994",
+  "version": "0.995",
   "manifest_version": 2,
-  "description": "Gives Ctrl+F like find results which include non-exact (fuzzy) matches. ",
+  "description": "Gives Ctrl+F like find non-exact (fuzzy) results and regular expression matches. ",
   "icons": {
-    "128": "./icons/flower_icon.png"
+    "128": "./icons/fuzbal_icon.png"
   },
   "browser_action": {
     "default_name": "Fuzbal",
-    "default_icon": "./icons/flower_marker.png",
+    "default_icon": "./icons/fuzbal_marker.png",
     "default_popup": "popup.html"
   },
   "background": {

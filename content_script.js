@@ -1,22 +1,22 @@
 /* author: ijkilchenko@gmail.com
 MIT license */
 
-var visibleText; // holds all the visible text on current tab as a string (after sanitization)
-var uniqueVisibleWords; // array of the vocabulary of words on current tab
-var localWords2Vects = {}; // subset of the whole word vectors dictionary of words that appear on current tab
-var stopWords; // English stopwords
+var visibleText; // Holds all the visible text on current tab as a string (after sanitization). 
+var uniqueVisibleWords; // Array of the vocabulary of words on current tab. 
+var localWords2Vects = {}; // Subset of the whole word vectors dictionary of words that appear on current tab.
+var stopWords; // English stopwords.
 
-var highlited = []; // span elements which are currently highlighted
-var lastSearchText = ''; // used to populate the popup after being closed
-var doNotEscape = true; // are we searching using a regular expression?
+var highlited = []; // Span elements which are currently highlighted. 
+var lastSearchText = ''; // Used to populate the popup after being closed.
+var doNotEscape = true; // Are we searching using a regular expression?
 
 var properly_quoted_regex = /^(?:(?:\s{0,1}\"([^\s](?:(?!(?:\s\")).)*)\"(?=(?:\s|$)))|(?:(?!(?:.\"))[^\"]))*$/;
 
 var lastResultSelectedIndex = 0;
 
 var portB2 = chrome.runtime.connect({name: "vectorsLookup"});
-/* anytime we get a message back from background page under this port, we enrich our local word2vec dictionary
-we can continuously look up the vectors for the search terms and add those definitions to localWords2Vects */
+/* Anytime we get a message back from background page under this port, we enrich our local word2vec dictionary.
+We can continuously look up the vectors for the search terms and add those definitions to localWords2Vects */
 portB2.onMessage.addListener(function(msg) {
 	for (var word in msg.localWords2Vects){
 		localWords2Vects[word] = msg.localWords2Vects[word];
@@ -26,13 +26,14 @@ portB2.onMessage.addListener(function(msg) {
 	var m = lastSearchText.match(properly_quoted_regex);
 	if (lastSearchText.length > 0 && properly_quoted_regex.exec(lastSearchText)) {
 		if (doNotEscape == false || (doNotEscape == true && !''.match(lastSearchText))) {
-			results = getResults(lastSearchText, 10); // only consider the top 10 nearest neighbors to each word on the page
+			var NUM_NEAREST_NEIGHBORS = 10;
+			results = getResults(lastSearchText, NUM_NEAREST_NEIGHBORS); // Only consider the top N nearest neighbors to each word on the page.
 			portP2.postMessage({results: results});
 		} else {
-			portP2.postMessage({results: []}); // send empty list back if nothing is in the searchText input box
+			portP2.postMessage({results: []}); // Send empty list back if nothing is in the searchText input box. 
 		}
 	} else {
-		portP2.postMessage({results: []}); // send empty list back if nothing is in the searchText input box
+		portP2.postMessage({results: []}); // Send empty list back if nothing is in the searchText input box. 
 	}
 });
 
@@ -58,13 +59,13 @@ function parseDom() {
 
 	uniqueVisibleWords = Array.from(uniqueWords);
 
-	portB2.postMessage({words: uniqueVisibleWords}); // order the vectors via the vectorsLookup port
+	portB2.postMessage({words: uniqueVisibleWords}); // Order the vectors via the vectorsLookup port. 
 }
 
-parseDom(); // we can start parsing the DOM without loading any functions below
-portB1.postMessage({}); // ask to get stop words (from background page which loaded them from a json)
+parseDom(); // We can start parsing the DOM without loading any functions below.
+portB1.postMessage({}); // Ask to get stop words (from background page which loaded them from a json). 
 
-var levenshtein = DamerauLevenshtein({}, true); // instantiate the edit-distance object
+var levenshtein = DamerauLevenshtein({}, true); // Instantiate the edit-distance object. 
 var mergeSortCache = {};
 
 function isRegEx(searchText) {
@@ -79,19 +80,21 @@ chrome.runtime.onConnect.addListener(function(portP) {
 	if (portP.name == "fromSendAndReceive") {
 		portP.onMessage.addListener(function(msg) {
 			var searchText = msg.searchText;
-			/* Performance condition: only keep the first 50 characters of a query */
-			lastSearchText = searchText.substring(0, 50).toLowerCase().trim(); // update the last searched text
+			/* Performance condition: only keep the first N characters of a query. */
+			var QUERY_MAX_LENGTH = 50;
+			lastSearchText = searchText.substring(0, QUERY_MAX_LENGTH).toLowerCase().trim(); // Update the last searched text.
 
 			clearHighlighting();
 			var searchTextWords;
-			// Check if we passed a regular expression (lastSearchText must start and end with a forward-slash)
+			// Check if we passed a regular expression (lastSearchText must start and end with a forward-slash). 
 			if (isRegEx(searchText)) {
 				searchTextWords = [];
 				doNotEscape = true;
 			} else {
 				searchText = sanitize1(lastSearchText); // sanitize but keep double quotes
-				/* Performance condition: only keep the first 6 words of a query */
-				searchTextWords = searchText.split(' ').splice(0, 6);
+				/* Performance condition: only keep the first N words of a query.  */
+				var MAX_NUM_WORDS_IN_QUERY = 6;
+				searchTextWords = searchText.split(' ').splice(0, MAX_NUM_WORDS_IN_QUERY);
 				doNotEscape = false;
 			}
 			portB2.postMessage({words: searchTextWords});
@@ -127,7 +130,7 @@ function scrollToHighlite(resultSelectedIndex) {
 }
 
 function expandSearchText(searchText, knn) {
-	var searchTexts = [searchText]; // original search text must be returned no matter what
+	var searchTexts = [searchText]; // Original search text must be returned no matter what. 
 	var searchTextWords = searchText.split(' ');
 	var searchTextWordsWithExacts = [];
 
@@ -153,89 +156,91 @@ function expandSearchText(searchText, knn) {
 
 	var substitutions = {};
 	for (var i = 0; i < searchTextWords.length; i++) {
-		substitutions[searchTextWords[i]] = [searchTextWords[i]]; // word is a substitute for itself
+		substitutions[searchTextWords[i]] = [searchTextWords[i]]; // Word is a substitute for itself. 
 	}
-	// following nested for-loop looks for words close in edit-distance to the search words to find substitutes
+	// Following nested for-loop looks for words close in edit-distance to the search words to find substitutes. 
+	var MAX_SYNONYMS_PER_WORD = 10;
 	for (var i = 0; i < searchTextWords.length; i++) {
 		if (searchTextWords[i].slice(0, 1) == '"' && searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) == '"' && searchTextWords[i].length > 2) {
 			substitutions[searchTextWords[i]] = [escapeRegExp(searchTextWords[i].slice(1, searchTextWords[i].length-1))];
 		} else {
-			if (searchTextWords[i].length > 3 &&  // we only care if the word is at least 4 letters long (before we assume spelling mistakes are made)
+			if (searchTextWords[i].length > 3 &&  // We only care if the word is at least 4 letters long (before we assume spelling mistakes are made). 
 				stopWords.words.indexOf(searchTextWords[i]) == -1) {
 				for (var j = 0; j < uniqueVisibleWords.length; j++) {
 					if (uniqueVisibleWords[j].length > 3 &&
 						stopWords.words.indexOf(uniqueVisibleWords[j]) == -1) {
 						distance = levenshtein(searchTextWords[i], uniqueVisibleWords[j]);
-						if (distance < 2) { // if there is only 1 atomic operation (insert, deletion, substitution, transposition) difference
+						if (distance < 2) { // If there is only 1 atomic operation (insert, deletion, substitution, transposition) difference. 
 							substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat([uniqueVisibleWords[j]]);
 						}
 					}
-					/* Performance condition. Any word shall only have at most 10 substitutions. */
-					if (substitutions[searchTextWords[i]].length > 10) {
+					/* Performance condition. Any word shall only have at most N substitutions. */
+					if (substitutions[searchTextWords[i]].length > MAX_SYNONYMS_PER_WORD) {
 						break;
 					}
 				}
 			}
 		}
 		/* Performance condition. Any word shall only have at most 10 substitutions. */
-		if (substitutions[searchTextWords[i]].length > 10) {
-			substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
+		if (substitutions[searchTextWords[i]].length > MAX_SYNONYMS_PER_WORD) {
+			substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, MAX_SYNONYMS_PER_WORD);
 		}
 	}
-	for (var i = 0; i < searchTextWords.length; i++) { // for every word in the searchText and their substitutions
+	for (var i = 0; i < searchTextWords.length; i++) { // For every word in the searchText and their substitutions.
 		if (searchTextWords[i].slice(0, 1) == '"' && searchTextWords[i].slice(searchTextWords[i].length-1, searchTextWords[i].length) == '"' && searchTextWords[i].length > 2) {
 			substitutions[searchTextWords[i]] = [escapeRegExp(searchTextWords[i].slice(1, searchTextWords[i].length-1))];
 		} else {
 			for (var s = 0; s < substitutions[searchTextWords[i]].length; s++) {
 				var sub = substitutions[searchTextWords[i]][s];
 				/* We try to expand a word under the following conditions:
-				(1) word must be larger than 3 characters (otherwise we waste time on words that probably don't help)
-				(2) word is not in the stopWords list (we don't want to find all the similar words to "to", "i", etc.) and
-				(3) word we are expanding is actually one we know the vector for */
-				if (sub.length > 3 &&
+				(1) word must be larger than N characters (otherwise we waste time on words that probably don't help), 
+				(2) word is not in the stopWords list (we don't want to find all the similar words to "to", "i", etc.), and
+				(3) word we are expanding is actually one we know the vector for. */
+				var MIN_WORD_LENGTH_FOR_EXPANSION = 3;
+				if (sub.length > MIN_WORD_LENGTH_FOR_EXPANSION &&
 					stopWords.words.indexOf(sub) == -1 &&
 					sub in localWords2Vects) {
 
 					var vector = localWords2Vects[sub];
-					var words = []; // where we keep all the similar words
-					for (var j = 0; j < uniqueVisibleWords.length; j++) { // for every unique word on the page
+					var words = []; // Where we keep all the similar words.
+					for (var j = 0; j < uniqueVisibleWords.length; j++) { // For every unique word on the page
 						/* The word expansions must also be:
-						(1) similar word must be larger than 2 characters
-						(2) not stop words themselves and
-						(3) we must know the vector for them */
-						if (uniqueVisibleWords[j].length > 3 &&
+						(1) similar word must be larger than N characters, 
+						(2) not stop words themselves, and
+						(3) we must know the vector for them. */
+						if (uniqueVisibleWords[j].length > MIN_WORD_LENGTH_FOR_EXPANSION  &&
 							stopWords.words.indexOf(uniqueVisibleWords[j]) == -1 &&
 							uniqueVisibleWords[j] in localWords2Vects) {
-							// each element in words contains the similar word and the distance (score) between the vectors between the pair of words
-							words[words.length] = {'word' : uniqueVisibleWords[j], // the similar word
+							// Each element in words contains the similar word and the distance (score) between the vectors between the pair of words. 
+							words[words.length] = {'word' : uniqueVisibleWords[j], // The similar word. 
 							'score' : getDistance(localWords2Vects[uniqueVisibleWords[j]], vector)};
 						}
 					}
 					words = words.sort(function(elem1, elem2) {
-						return elem1.score - elem2.score; // sort the words array by the scores in ascending order
-					}).slice(0, knn); // take the closest knn words (we do not care about their actual distance)
-					words = words.filter(function(el) { return el.score < 100 }); // use only the words where the distance squared is less than 100
+						return elem1.score - elem2.score; // Sort the words array by the scores in ascending order. 
+					}).slice(0, knn); // Take the closest knn words (we do not care about their actual distance). 
+					var MAX_DISTANCE_AWAY = 100;
+					words = words.filter(function(el) { return el.score < MAX_DISTANCE_AWAY }); // Use only the words where the distance squared is less than N. 
 					for (var j = 0; j < words.length; j++) {
-						words[j] = words[j].word; // drop the distance attribute
+						words[j] = words[j].word; // Drop the distance attribute.
 					}
 					substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].concat(words); // map the word in the searchText to an array of similar words
 				}
 				/* Performance condition. Any word shall only have at most 10 substitutions. */
-				if (substitutions[searchTextWords[i]].length > 10) {
-					substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, 10);
+				if (substitutions[searchTextWords[i]].length > MAX_SYNONYMS_PER_WORD) {
+					substitutions[searchTextWords[i]] = substitutions[searchTextWords[i]].slice(0, MAX_SYNONYMS_PER_WORD);
 				}
 			}
 		}
 	}
-	var substitutionsInOrder = []; // will hold our regular expression which has substitutions for each word in searchText
+	var substitutionsInOrder = []; // Will hold our regular expression which has substitutions for each word in searchText. 
 	for (var i = 0; i < searchTextWords.length; i++) {
-		if (searchTextWords[i] in substitutions) { // check if we actually include a given word in our mapping
+		if (searchTextWords[i] in substitutions) { // Check if we actually include a given word in our mapping. 
 			substitutionsInOrder[substitutionsInOrder.length] = substitutions[searchTextWords[i]].join('|');
 		} else {
 			substitutionsInOrder[substitutionsInOrder.length] = searchTextWords[i];
 		}
 	}
-	//substitutionsInOrder = substitutionsInOrder.replace(/"/g, '');
 
 	var regex = new RegExp('(' + substitutionsInOrder.join(') (') + ')', 'gi');
 	do {
@@ -244,11 +249,11 @@ function expandSearchText(searchText, knn) {
 		specific on the actual tab. */
 		m = regex.exec(visibleText);
 		if (m) {
-			searchTexts[searchTexts.length] = m[0]; // grab the substring that results our regular expression
+			searchTexts[searchTexts.length] = m[0]; // Grab the substring that results our regular expression. 
 		}
 	} while (m);
-	searchTexts = searchTexts.filter(function(elem, i, array){ return array.indexOf(elem) === i }); // keep only unique results
-	searchTexts = searchTexts.filter(function(el) { return el.length != 0 }); // make sure we don't somehow end up with an empty string anywhere
+	searchTexts = searchTexts.filter(function(elem, i, array){ return array.indexOf(elem) === i }); // Keep only unique results.
+	searchTexts = searchTexts.filter(function(el) { return el.length != 0 }); // Make sure we don't somehow end up with an empty string anywhere.
 
 	return searchTexts;
 }
@@ -267,11 +272,11 @@ function getResults(searchText, knn) {
 	} else {
 		var searchTexts = expandSearchText(searchText, knn);
 	}
-	highlite(searchTexts); // highlight original searchText and its expansions
+	highlite(searchTexts); // Highlight original searchText and its expansions.
 
 	highlited = document.getElementsByClassName('fzbl_highlite');
 
-	var results = []; // will hold the match objects to be sent back to the popup
+	var results = []; // Will hold the match objects to be sent back to the popup.
 	for (var i = 0; i < highlited.length; i++) {
 		var siblings = [];
 		var index;
@@ -313,7 +318,7 @@ function getResults(searchText, knn) {
 	/* The following block sorts the results array based on thisResult attribute and
 	how close it is to the original searchText based on the edit-distance score. */
 	mergeSortCache = {};
-	results = mergeSort(results, searchText); // we use our own stable sort (we need stable so that results appear in the correct order on the page)
+	results = mergeSort(results, searchText); // We use our own stable sort (we need a stable sort so that results appear in the correct order on the page). 
 	highlited = [];
 	for (var i = 0; i < results.length; i++) {
 		highlited[highlited.length] = results[i].element;
@@ -330,9 +335,9 @@ function highlite(phrases) {
 		_highlite(document.body, regex);
 	} else {
 		for (var i = 0; i < phrases.length; i++) {
-			phrases[i] = escapeRegExp(phrases[i]); // before matching, escape any regular expressions
+			phrases[i] = escapeRegExp(phrases[i]); // Before matching, escape any regular expressions.
 		}
-		phrases = phrases.join('|'); // look for any of the searchText expansions
+		phrases = phrases.join('|'); // Look for any of the searchText expansions.
 		if (phrases.length > 0) {
 			var pattern = '(' + phrases + ')';
 			var regex = new RegExp(pattern, 'i');
@@ -344,17 +349,18 @@ function highlite(phrases) {
 function _highlite(node, regex) {
 	if (node.nodeType == 3) {
 		var match = node.data.match(regex);
-		if (match && numHighlited < 500) {
+		var MAX_HIGHLIGHTED_RESULTS = 500;
+		if (match && numHighlited < MAX_HIGHLIGHTED_RESULTS) {
 			/* If there is a match, we will split the original node into three parts.
 			A node with text before the match, a node with the match text, and a node with text after the match. */
-			var highlited = document.createElement('span'); // we will wrap our match inside a new span element
-			highlited.className = 'fzbl_highlite'; // we give it this className
-			highlited.style.backgroundColor = '#ffef14'; // and this becomes the background color for (non-active results)
-			var matchElement = node.splitText(match.index); // this becomes the node with the match text
+			var highlited = document.createElement('span'); // We will wrap our match inside a new span element.
+			highlited.className = 'fzbl_highlite'; // We give it this className.
+			highlited.style.backgroundColor = '#ffef14'; // And this becomes the background color for (non-active results).
+			var matchElement = node.splitText(match.index); // This becomes the node with the match text.
 			matchElement.splitText(match[0].length);
 			var wordClone = matchElement.cloneNode(false);
-			highlited.appendChild(wordClone); // add the match text
-			matchElement.parentNode.replaceChild(highlited, matchElement); // replace the middle node with the matchElement
+			highlited.appendChild(wordClone); // Add the match text.
+			matchElement.parentNode.replaceChild(highlited, matchElement); // Replace the middle node with the matchElement.
 			numHighlited += 1;
 		}
 	} else if (node.nodeType == 1 && node.childNodes.length > 0 && node.tagName != 'SCRIPT' && node.tagName != 'STYLE' && node.tagName != 'IMG' && node.className != 'fzbl_highlite') {
@@ -404,14 +410,14 @@ function compare(elem1, elem2, searchText) {
 	if (elem1.thisResult in mergeSortCache) {
 		a = mergeSortCache[elem1.thisResult];
 	} else {
-		a = levenshtein(elem1.thisResult, searchText.toLowerCase());
+		a = levenshtein(elem1.thisResult.toLowerCase(), searchText.toLowerCase());
 		mergeSortCache[elem1.thisResult] = a;
 	}
 	var b;
 	if (elem2.thisResult in mergeSortCache) {
 		b = mergeSortCache[elem2.thisResult];
 	} else {
-		b = levenshtein(elem2.thisResult, searchText.toLowerCase());
+		b = levenshtein(elem2.thisResult.toLowerCase(), searchText.toLowerCase());
 		mergeSortCache[elem2.thisResult] = b;
 	}
 	return a-b;
@@ -419,25 +425,27 @@ function compare(elem1, elem2, searchText) {
 
 function merge(left, right, searchText) {
 	var result = [];
+	var left_i = 0;
+	var right_i = 0;
 
-	while (left.length > 0 || right.length > 0) {
-		if (left.length > 0 && right.length > 0) {
-			if (compare(left[0], right[0], searchText) <= 0) {
-				result.push(left[0]);
-				left = left.slice(1);
+	while (left.length > left_i || right.length > right_i) {
+		if (left.length > left_i && right.length > right_i) {
+			if (compare(left[left_i], right[right_i], searchText) <= 0) {
+				result.push(left[left_i]);
+				left_i = left_i + 1;
 			}
 			else {
-				result.push(right[0]);
-				right = right.slice(1);
+				result.push(right[right_i]);
+				right_i = right_i + 1;
 			}
 		}
-		else if (left.length > 0) {
-			result.push(left[0]);
-			left = left.slice(1);
+		else if (left.length > left_i) {
+			result.push(left[left_i]);
+			left_i = left_i + 1;
 		}
-		else if (right.length > 0) {
-			result.push(right[0]);
-			right = right.slice(1);
+		else if (right.length > right_i) {
+			result.push(right[right_i]);
+			right_i = right_i + 1;
 		}
 	}
 	return result;
